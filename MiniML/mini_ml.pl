@@ -1,7 +1,9 @@
 % Mini-ML semantics
 % From Kahn 1984
 
-:-module(mini_ml,_).
+:-module(mini_ml,_,[assertions]).
+
+:- entry testfac(_,_).
 
 go(E,V) :-
 	init(Rho),
@@ -150,4 +152,26 @@ evenodd(
 		%apply(id(even),number(4))
 		mlpair(id(even),id(odd))
 	)).
+	
+% factorial applied to N
+
+fact(N,
+	letrec(id(fact),
+		lambda(id(x),
+		if(apply(id(eq),mlpair(id(x),number(0))),
+			number(1),
+			apply(id(times),
+				mlpair(id(x),
+					apply(id(fact),
+						apply(id(sub),mlpair(id(x),number(1))))
+			)
+		))),
+		apply(id(fact),number(N))
+		)
+	).
+	
+	
+testfac(N,V) :-
+	fact(N,E),
+	go(E,V).
 	
