@@ -1,5 +1,7 @@
 :- module(linearSolve,_).
 
+% An interpreter for linear solving of Horn clauses
+
 go(A) :-
 	solve([A]).
 solve([A|As]) :-
