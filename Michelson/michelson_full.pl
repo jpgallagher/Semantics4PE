@@ -227,10 +227,116 @@ code(compare,[(SA,SB),(TA,TB)|S],[R|S]) :-
 	code(compare,[SB,TB|S],[R|S]).
 	
 % Operations on sets
+
+code((empty_set, _T),S,[[]|S]).
+code(mem, [_X,[]|S], [false|S]).
+code(mem, [X,[Y|Ys]|S], [R|S]) :-
+	code(compare,[X,Y],[1]),
+	code(mem,[X,Ys|S], [R|S]).
+code(mem, [X,[Y|_Ys]|S], [true|S]) :-
+	code(compare,[X,Y],[0]).
+code(mem, [X,[Y|_Ys]|S], [false|S]) :-
+	code(compare,[X,Y],[-1]).
+code(update, [_X,false,[]|S], [[]|S]).
+code(update, [X,true,[]|S], [[X]|S]).
+code(update, [X,V,[Y|Ys]|S], [[Y|Ys1]|S]) :-
+	code(compare,[X,Y],[1]),
+	code(update, [X,V,Ys|S], [Ys1|S]).
+code(update, [X,false,[Y|Ys]|S], [Ys|S]) :-
+	code(compare,[X,Y],[0]).
+code(update, [X,true,[Y|Ys]|S], [[Y|Ys]|S]) :-
+	code(compare,[X,Y],[0]).
+code(update, [X,false,[Y|Ys]|S], [[Y|Ys]|S]) :-
+	code(compare,[X,Y],[-1]).
+code(update, [X,true,[Y|Ys]|S], [[X,Y|Ys]|S]) :-
+	code(compare,[X,Y],[-1]).
+	
 % Operations on maps
+
+code((empty_map,_K,_V),S,[[]|S]).
+code(get, [_X,[]|S], [none|S]).
+code(get, [X,[element(K,_V)|Ys]|S], [R|S]) :-
+	code(compare,[X,K],[1]),
+	code(get,[X,Ys|S], [R|S]).
+code(get, [X,[element(K,V)|_Ys]|S], [some(V)|S]) :-
+	code(compare,[X,K],[0]).
+code(get, [X,[element(K,_V)|_Ys]|S], [none|S]) :-
+	code(compare,[X,K],[-1]).
+code(mem, [_X,[]|S], [false|S]).
+code(mem, [X,[element(K,_V)|Ys]|S], [R|S]) :-
+	code(compare,[X,K],[1]),
+	code(mem,[X,Ys|S], [R|S]).
+code(mem, [X,[element(K,_V)|_Ys]|S], [true|S]) :-
+	code(compare,[X,K],[0]).
+code(mem, [X,[element(K,_V)|_Ys]|S], [false|S]) :-
+	code(compare,[X,K],[-1]).
+code(update, [_X,none,[]|S], [[]|S]).
+code(update, [X,some(Y),[]|S], [[element(X,Y)]|S]).
+code(update, [X,V,[element(K,V)|Ys]|S], [[element(K,V)|Ys1]|S]) :-
+	code(compare,[X,K],[1]),
+	code(update, [X,V,Ys|S], [Ys1|S]).
+code(update, [X,none,[element(K,_V)|Ys]|S], [Ys|S]) :-
+	code(compare,[X,K],[0]).
+code(update, [X,some(V),[element(K,_V)|Ys]|S], [[element(K,V)|Ys]|S]) :-
+	code(compare,[X,K],[0]).
+code(update, [X,none,[element(K,V)|Ys]|S], [[element(K,V)|Ys]|S]) :-
+	code(compare,[X,K],[-1]).
+code(update, [X,some(Y),[element(K,V)|Ys]|S], [[element(X,Y),element(K,V),Y|Ys]|S]) :-
+	code(compare,[X,K],[-1]).
+code(get_and_update, [_X,none,[]|S], [none,[]|S]).
+code(get_and_update, [X,some(Y),[]|S], [none,[element(X,Y)]|S]).
+code(get_and_update, [X,V,[element(K,V)|Ys]|S], [R,[element(K,V)|Ys1]|S]) :-
+	code(compare,[X,K],[1]),
+	code(get_and_update, [X,V,Ys|S], [R,Ys1|S]).
+code(get_and_update, [X,none,[element(K,V)|Ys]|S], [some(V),Ys|S]) :-
+	code(compare,[X,K],[0]).
+code(get_and_update, [X,some(V),[element(K,W)|Ys]|S], [some(W),[element(K,V)|Ys]|S]) :-
+	code(get_and_update,[X,K],[0]).
+code(get_and_update, [X,none,[element(K,V)|Ys]|S], [none,[element(K,V)|Ys]|S]) :-
+	code(compare,[X,K],[-1]).
+code(get_and_update, [X,some(Y),[element(K,V)|Ys]|S], [[none,element(X,Y),element(K,V),Y|Ys]|S]) :-
+	code(compare,[X,K],[-1]).
+code((map,_),[[]|S0],[[]|S0]).
+code((map,Body),[[element(K,V)|Xs]|S0],[[element(K,W)|Ys]|S2]) :-
+	code(Body,[(K,V)|S0],[W|S1]),
+	code((map,Body),[Xs|S1],[Ys|S2]).
+
 % Operations on big_maps
+
+code((empty_big_map,_K,_V),S,[[]|S]).
+
 % Operations on optional values
+
+code(some,[V|S],[some(V)|S]).
+code(none,S,[none|S]).
+code((if_none,BT,_BF),[none|S],S1) :-
+	code(BT,S,S1).
+code((if_none,_BT,BF),[some(A)|S],S1) :-
+	code(BF,[A|S],S1).
+code(compare,[none,none|S],[0|S]).
+code(compare,[none,some(_)|S],[-1|S]).
+code(compare,[some(_),none|S],[1|S]).
+code(compare,[some(A),some(B)|S],S1) :-
+	code(compare,[A,B|S],S1).
+code((map,_Body),[none|S], [none|S]).
+code((map,Body),[some(A)|S0],[some(B)|S1]) :-
+  code(Body,[A|S0],[B|S1]).
+
 % Operations on unions
+
+code(left,[V|S],[left(V)|S]).
+code(right,[V|S],[right(V)|S]).
+code((if_left,BT,_BF),[left(A)|S],S1) :-
+	code(BT,[A|S],S1).
+code((if_left,_BT,BF),[right(B)|S],S1) :-
+	code(BF,[B|S],S1).
+code(compare,[left(A),left(B)|S],S1) :-
+	code(compare,[A,B|S],S1).
+code(compare,[left(_),right(_)|S],[-1|S]).
+code(compare,[right(_),left(_)|S],[1|S]).
+code(compare,[right(A),right(B)|S],S1) :-
+	code(compare,[A,B|S],S1).
+
 % Operations on lists
 
 code(cons,[X,Xs|S],[[X|Xs]|S]).
@@ -252,8 +358,6 @@ code((iter,_),[[]|S0],S0).
 code((iter,Body),[[X|Xs]|S0],S2) :-
 	code(Body,[X|S0],S1),
 	code((iter,Body),[Xs|S1],S2).
-
-
 
 % Boolean functions
 
