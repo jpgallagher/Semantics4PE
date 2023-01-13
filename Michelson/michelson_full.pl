@@ -69,7 +69,7 @@ code(eq,[V|S],[false|S]) :-
 	V\=0.
 code(neq,[0|S],[false|S]).
 code(neq,[V|S],[true|S]) :-
-	V\=0.
+	V\==0.
 code(lt,[V|S],[true|S]) :-
 	V<0.
 code(lt,[V|S],[false|S]) :-
@@ -379,16 +379,63 @@ xor(false,false,false).
 negate(true,false).
 negate(false,true).
 
-% Test example 1:  reverse a list.  test([1,2,3],S)  --> S = [([],[3,2,1])]
+% Test example 1:  reverse a list.  test1([1,2,3],S)  --> S = [([],[3,2,1])]
 	
 test1(S0,S1) :-
 	code((car;(nil,int);swap;(iter,cons);(nil,operation);pair),[(S0,_)],S1).
 	
-% parameter int ;
-% storage int ;
-% code { DUP ; UNPAIR ; IFCMPGT { CAR } { CDR } ; NIL operation ; PAIR }
+/* parameter (list string) ;
+storage (list string) ;
+code { CAR ;
+       NIL string ;
+       SWAP ;
+       PUSH bool True ;
+       LOOP { IF_CONS { CONS ; SWAP ; PUSH bool True } { NIL string ; PUSH bool False } } ;
+       DROP ;
+       NIL operation ;
+       PAIR }
+*/
 
+% Test example 2:   test2(['hi', 'friend'],S)  --> [([],[hi,friend])]
 test2(S0,S1) :-
-	code((dup,unpair,compare,gt,(if,car,cdr),(nil,operation),pair),[(S0,_)],S1).
+	code(
+	   (car;
+       (nil,string);
+       swap;
+       (push, bool, true);
+       (loop, (if_cons, (cons; swap; (push, bool, true)), ((nil,string); (push, bool,false)));
+       drop;
+       (nil, operation);
+       pair)),[(S0,_)],S1).
+       
+/*
+parameter (pair int (list int)) ; 
+storage int ;
+code {
+CAR ;
+UNPAIR ;
+DUP ;
+SUB ;
+DIIP { PUSH int 0 } ;
+IFNEQ { ITER { ADD } } { DROP } ; NIL operation ;  % should be IFEQ?
+PAIR }
+*/
+
+% Example. test3((3,[5,6,7]),S) --> S=[([],18)]
+% Modified slightly from Listing 1.2 in the SAS paper, 
+% so that it now adds the elements of the list.
+% The first input arg seems irrelevant since after dup; sub 
+% the top of stack is 0, whatever the value of the parameter.
+
+test3(S0,S1) :-
+	code(
+	   (car;
+       unpair;
+       dup;
+       sub;
+       (dip, 2, (push,int,0));
+       eq; (if,(iter,add),drop); (nil, operation);
+       pair),[(S0,_)],S1).
+
 	
 	
