@@ -1,5 +1,9 @@
 :- module(michelson_full,_).
 
+:- use_module(ciao_tezos(micheline/micheline_lexer)).
+:- use_module(ciao_tezos(micheline/micheline_parser)).
+:- use_module(ciao_tezos(parser/ast)).
+
 % See https://tezos.gitlab.io/active/michelson.html for Michelson language definition.
 
 % Control structures
@@ -182,10 +186,16 @@ code(lsr,[X,Sh|_S],['FAILED']) :-
 	number(Sh),
 	Sh > 256.
 code(compare,[X,Y|S],[-1|S]) :-
+	number(X),
+	number(Y),
 	X<Y.
 code(compare,[X,Y|S],[0|S]) :-
+	number(X),
+	number(Y),
 	X is Y.
 code(compare,[X,Y|S],[1|S]) :-
+	number(X),
+	number(Y),
 	X>Y.
 	
 % Operations on strings
@@ -272,9 +282,9 @@ code(mem, [X,[element(K,_V)|_Ys]|S], [false|S]) :-
 	code(compare,[X,K],[-1]).
 code(update, [_X,none,[]|S], [[]|S]).
 code(update, [X,some(Y),[]|S], [[element(X,Y)]|S]).
-code(update, [X,V,[element(K,V)|Ys]|S], [[element(K,V)|Ys1]|S]) :-
+code(update, [X,Opt_y,[element(K,V)|Tl]|S], [[element(K,V)|Tl1]|S]) :-
 	code(compare,[X,K],[1]),
-	code(update, [X,V,Ys|S], [Ys1|S]).
+	code(update, [X,Opt_y,Tl|S], [Tl1|S]).
 code(update, [X,none,[element(K,_V)|Ys]|S], [Ys|S]) :-
 	code(compare,[X,K],[0]).
 code(update, [X,some(V),[element(K,_V)|Ys]|S], [[element(K,V)|Ys]|S]) :-
@@ -285,9 +295,9 @@ code(update, [X,some(Y),[element(K,V)|Ys]|S], [[element(X,Y),element(K,V),Y|Ys]|
 	code(compare,[X,K],[-1]).
 code(get_and_update, [_X,none,[]|S], [none,[]|S]).
 code(get_and_update, [X,some(Y),[]|S], [none,[element(X,Y)]|S]).
-code(get_and_update, [X,V,[element(K,V)|Ys]|S], [R,[element(K,V)|Ys1]|S]) :-
+code(get_and_update, [X,Opt,[element(K,V)|Ys]|S], [R,[element(K,V)|Ys1]|S]) :-
 	code(compare,[X,K],[1]),
-	code(get_and_update, [X,V,Ys|S], [R,Ys1|S]).
+	code(get_and_update, [X,Opt,Ys|S], [R,Ys1|S]).
 code(get_and_update, [X,none,[element(K,V)|Ys]|S], [some(V),Ys|S]) :-
 	code(compare,[X,K],[0]).
 code(get_and_update, [X,some(V),[element(K,W)|Ys]|S], [some(W),[element(K,V)|Ys]|S]) :-
@@ -436,6 +446,13 @@ test3(S0,S1) :-
        (dip, 2, (push,int,0));
        eq; (if,(iter,add),drop); (nil, operation);
        pair),[(S0,_)],S1).
+       
+       
+% Get code by parsing Michelson source code file F
 
-	
+test(F,Arg,Result) :-
+	tz_tokenize(F,T1),
+	parse_toplevel(T1,T2),
+	ast(T2,AST),
+	code(AST,[(Arg,_)],Result).
 	
