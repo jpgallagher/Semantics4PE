@@ -27,6 +27,7 @@ code((loop_left,_Body),[right(B)|S0],[B|S0]).
 code((dip,Code),[X|S0],[X|S1]) :-
 	code(Code,S0,S1).
 code((dip,N,Code),[X|S0],[X|S1]) :-
+	number(N),
 	N>0,
 	N1 is N-1,
 	code((dip,N1,Code),S0,S1).
@@ -41,23 +42,27 @@ code(apply,[A,F|S0],S1) :-
 	
 code(drop,[_|S0],S0).
 code((drop,N),[_|S0],S1) :-
+	number(N),
 	N>0,
 	N1 is N-1,
 	code((drop,N1),S0,S1).
 code((drop,0),S0,S0).
 code(dup,[X|S],[X,X|S]).
 code((dup,N),[X|S],[Y,X|S]) :-
+	number(N),
 	N>1,
 	N1 is N-1,
 	code((dup,N1),S,[Y|S]).
 code((dup,1),[X|S],[X,X|S]).
 code(swap,[X,Y|S],[Y,X|S]).
 code((dig,N),[X|S],[Y,X|S1]) :-
+	number(N),
 	N>0,
 	N1 is N-1,
 	code((dig,N1),S,[Y|S1]).
 code((dig,0),S,S).
 code((dug,N),[X,Y|S0],[Y|S1]) :-
+	number(N),
 	N>0,
 	N1 is N-1,
 	code((dug,N1),[X|S0],S1).
@@ -70,25 +75,35 @@ code((lambda_rec,TA,TB,Code),S,[((lambda_rec,TA,TB,Code);Code)|S]).% Code has ty
 
 code(eq,[0|S],[true|S]).
 code(eq,[V|S],[false|S]) :-
-	V\=0.
+	number(V),
+	V\==0.
 code(neq,[0|S],[false|S]).
 code(neq,[V|S],[true|S]) :-
+	number(V),
 	V\==0.
 code(lt,[V|S],[true|S]) :-
+	number(V),
 	V<0.
 code(lt,[V|S],[false|S]) :-
+	number(V),
 	V>=0.
 code(gt,[V|S],[true|S]) :-
+	number(V),
 	V>0.
 code(gt,[V|S],[false|S]) :-
+	number(V),
 	V=<0.
 code(le,[V|S],[true|S]) :-
+	number(V),
 	V=<0.
 code(le,[V|S],[false|S]) :-
+	number(V),
 	V>0.
 code(ge,[V|S],[true|S]) :-
+	number(V),
 	V>=0.
 code(ge,[V|S],[false|S]) :-
+	number(V),
 	V<0.
 	
 % Operations on Unit
@@ -388,14 +403,17 @@ code((iter,Body),[[X|Xs]|S0],S2) :-
 % Compare
 
 code(CMP_Op, S0,S1) :-
+	atom(CMP_Op),
 	atom_concat(cmp,Op,CMP_Op),
 	member(Op,[eq,neq,lt,gt,le,ge]),
 	code((compare;Op),S0,S1).
 code((IF_Op,BT,BF), S0,S1) :-
+	atom(IF_Op),
 	atom_concat(if,Op,IF_Op),
 	member(Op,[eq,neq,lt,gt,le,ge]),
 	code((Op;(if,BT,BF)),S0,S1).
 code((IFCMP_Op,BT,BF), S0,S1) :-
+	atom(IFCMP_Op),
 	atom_concat(ifcmp,Op,IFCMP_Op),
 	member(Op,[eq,neq,lt,gt,le,ge]),
 	code((compare;Op;(if,BT,BF)),S0,S1).
@@ -410,11 +428,13 @@ code(fail,S0,S1) :-
 code(assert,S0,S1) :-
 	code((if,{},fail),S0,S1).
 code(Assert_Op, S0,S1) :-
+	atom(Assert_Op),
 	atom_concat('assert_',Op,Assert_Op),
 	member(Op,[eq,neq,lt,gt,le,ge]),
 	atom_concat(if,Op,IF_Op),
 	code((IF_Op,{},fail),S0,S1).
 code(Assert_Cmp_Op, S0,S1) :-
+	atom(Assert_Cmp_Op),
 	atom_concat(assert_cmp,Op,Assert_Cmp_Op),
 	member(Op,[eq,neq,lt,gt,le,ge]),
 	atom_concat(ifcmp,Op,IFCMP_Op),
@@ -434,7 +454,7 @@ code(assert_right,S0,S1) :-
 % Grammar P(\left=A|P(\left)(\right))(\right=I|P(\left)(\right))R
 
 code(PairExp,S0,S1) :-
-	pair_macro(PairExp,Struct),
+	pairMacro(PairExp,Struct),
 	pairCode(Struct,PairCode),
 	code(PairCode,S0,S1).
 	
@@ -442,13 +462,52 @@ code(PairExp,S0,S1) :-
 % Grammar UNP(\left=A|P(\left)(\right))(\right=I|P(\left)(\right))R
 
 code(UnpairExp,S0,S1) :-
-	unpair_macro(UnpairExp,Struct),
+	unpairMacro(UnpairExp,Struct),
 	unpairCode(Struct,UnpairCode),
 	code(UnpairCode,S0,S1).
 	
+% CAR/CDR expressions
+
+code(CadrExpr,S0,S1) :-
+	cadrMacro(CadrExpr,Struct),
+	cadrCode(Struct,CadrCode),
+	code(CadrCode,S0,S1).
+code((car,K),S0,S1) :-
+	N is 2*K+1,
+	code((get,N),S0,S1).
+code((cdr,K),S0,S1) :-
+	N is 2*K,
+	code((get,N),S0,S1).
+	
+code((if_some,BT,BF),S0,S1) :-
+	code((if_none,BF,BT),S0,S1).
+code((if_right,BT,BF),S0,S1) :-
+	code((if_left,BF,BT),S0,S1).
+	
+code(set_car,S0,S1) :-
+	code((cdr;swap;pair),S0,S1).
+code(set_cdr,S0,S1) :-
+	code((car;pair),S0,S1).
+	
+code(SetCadrExp,S0,S1) :-
+	setCadrMacro(SetCadrExp,Struct),
+	setCadrCode(Struct,SetCadrCode),
+	code(SetCadrCode,S0,S1).
+	
+code((map_car,Code),S0,S1) :-
+	code((dup;cdr;(dip,(car;Code));swap;pair),S0,S1).
+code((map_cdr,Code),S0,S1) :-
+	code((dup;cdr;Code;swap;car;pair),S0,S1).
+	
+code((MapCadrExp,Code),S0,S1) :-
+	mapCadrMacro(MapCadrExp,Struct),
+	mapCadrCode(Struct,Code,MapCadrCode),
+	code(MapCadrCode,S0,S1).
+		
 % Macro expansions
 
-pair_macro(PairExp,p+LCode+RCode+r) :-
+pairMacro(PairExp,p+LCode+RCode+r) :-
+	atom(PairExp),
 	PairExp \== pair,
 	atom_concat(p,LeftRight,PairExp),
 	atom_concat(Left,RightR,LeftRight),
@@ -456,7 +515,8 @@ pair_macro(PairExp,p+LCode+RCode+r) :-
 	atom_concat(Right,r,RightR),
 	right(Right,RCode).
 	
-unpair_macro(UnpairExp,un+(p+LCode+RCode+r)) :-
+unpairMacro(UnpairExp,un+(p+LCode+RCode+r)) :-
+	atom(UnpairExp),
 	UnpairExp \== unpair,
 	atom_concat(unp,LeftRight,UnpairExp),
 	atom_concat(Left,RightR,LeftRight),
@@ -466,18 +526,54 @@ unpair_macro(UnpairExp,un+(p+LCode+RCode+r)) :-
 	
 left(a,a).
 left(LeftExp,p+LCode+RCode) :-
+	atom(LeftExp),
 	atom_concat(p,LeftRight,LeftExp),
 	atom_concat(Left,Right,LeftRight),
+	Left\=='',
 	left(Left,LCode),
 	right(Right,RCode).
 	
 right(i,i).
 right(RightExp,p+LCode+RCode) :-
+	atom(RightExp),
 	atom_concat(p,LeftRight,RightExp),
 	atom_concat(Left,Right,LeftRight),
 	left(Left,LCode),
+	Left\=='',
 	right(Right,RCode).
 	
+cadrMacro(CadrExp,c+CadrCode+r) :-
+	atom(CadrExp),
+	CadrExp\==car, CadrExp\==cdr,
+	atom_concat(c,E,CadrExp),
+	atom_concat(ADExpr,r,E),
+	unwind(ADExpr,CadrCode).
+	
+setCadrMacro(SetCadrExp,'set_'+(c+SetCadrCode+r)) :-
+	atom(SetCadrExp),
+	SetCadrExp\==set_car, SetCadrExp\==set_cdr,
+	atom_concat(set_c,E,SetCadrExp),
+	atom_concat(ADExpr,r,E),
+	unwind(ADExpr,SetCadrCode).
+	
+mapCadrMacro(MapCadrExp,'map_'+(c+MapCadrCode+r)) :-
+	atom(MapCadrExp),
+	MapCadrExp\==map_car, MapCadrExp\==map_cdr,
+	atom_concat(map_c,E,MapCadrExp),
+	atom_concat(ADExpr,r,E),
+	unwind(ADExpr,MapCadrCode).
+	
+unwind(a,a).
+unwind(d,d).
+unwind(ADExpr,a+CadrCode) :-
+	atom_concat(a,Rest,ADExpr),
+	unwind(Rest,CadrCode).
+unwind(ADExpr,d+CadrCode) :-
+	atom_concat(d,Rest,ADExpr),
+	unwind(Rest,CadrCode).
+	
+
+
 % Generate code from (un)pair expressions
 
 pairCode(p+a+i+r,pair).
@@ -504,8 +600,26 @@ unpairCode(un+(p+L+R+r), (unpair;(dip,(UnRightR;UnLeftR))) ) :-
 	unpairCode(un+(L+r),UnLeftR),
 	unpairCode(un+(R+r),UnRightR).
 
-
+cadrCode(c+a+r,car).
+cadrCode(c+d+r,cdr).
+cadrCode(c+(a+R)+r,(car;CRR)) :-
+	cadrCode(c+R+r,CRR).
+cadrCode(c+(d+R)+r,(cdr;CRR)) :-
+	cadrCode(c+R+r,CRR).
 	
+setCadrCode('set_'+(c+a+r),set_car).
+setCadrCode('set_'+(c+d+r),set_cdr).
+setCadrCode('set_'+(c+(a+R)+r),(dup;(dip,(car;CRR));cdr;swap;pair)) :-
+	setCadrCode('set_'+(c+R+r),CRR).
+setCadrCode('set_'+(c+(d+R)+r),(dup;(dip,(cdr;CRR));car;pair)) :-
+	setCadrCode('set_'+(c+R+r),CRR).
+	
+mapCadrCode('map_'+(c+a+r),Code,(map_car,Code)).
+mapCadrCode('map_'+(c+d+r),Code,(map_cdr,Code)).
+mapCadrCode('map_'+(c+(a+R)+r),Code,(dup;(dip,(car;MRR));cdr;swap;pair)) :-
+	mapCadrCode('map_'+(c+R+r),Code,MRR).
+mapCadrCode('map_'+(c+(d+R)+r),Code,(dup;(dip,(cdr;MRR));car;pair)) :-
+	mapCadrCode('map_'+(c+R+r),Code,MRR).
 
 % Boolean functions
 
@@ -593,6 +707,22 @@ test3(S0,S1) :-
        eq; (if,(iter,add),drop); (nil, operation);
        pair),[(S0,_)],S1).
        
-       
+% factorial
 
+test4(S0,S1) :-
+	code(
+	   (car;
+	   lambda_rec,int,int,
+	   		(dup,2;
+	   		eq;
+	   		if,
+	   			(push,int,1),
+	   			(dup;push,int,1;dup,4;sub;exec;dup,3;mul);
+	   		dip,drop,2);
+	   swap;
+	   exec;
+	   nil,operation;
+	   pair),
+	   [(S0,_)],S1).
+	   
 	
