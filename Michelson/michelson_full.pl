@@ -368,6 +368,144 @@ code((iter,_),[[]|S0],S0).
 code((iter,Body),[[X|Xs]|S0],S2) :-
 	code(Body,[X|S0],S1),
 	code((iter,Body),[Xs|S1],S2).
+	
+% Domain-specific operations.  Not yet implemented
+% Operations on timestamps
+% Operations on mutez
+% Operations on contracts
+% Special operations
+% Operations on bytes
+% Cryptographic primitives
+% BLS12-381 primitives
+% Sapling operations
+% Operations on tickets
+% Operations on timelock
+% Events
+% Operations on views
+
+% Macros
+
+% Compare
+
+code(CMP_Op, S0,S1) :-
+	atom_concat(cmp,Op,CMP_Op),
+	member(Op,[eq,neq,lt,gt,le,ge]),
+	code((compare;Op),S0,S1).
+code((IF_Op,BT,BF), S0,S1) :-
+	atom_concat(if,Op,IF_Op),
+	member(Op,[eq,neq,lt,gt,le,ge]),
+	code((Op;(if,BT,BF)),S0,S1).
+code((IFCMP_Op,BT,BF), S0,S1) :-
+	atom_concat(ifcmp,Op,IFCMP_Op),
+	member(Op,[eq,neq,lt,gt,le,ge]),
+	code((compare;Op;(if,BT,BF)),S0,S1).
+	
+% Fail
+
+code(fail,S0,S1) :-
+	code((unit;failwith),S0,S1).
+	
+% Assertion macros
+
+code(assert,S0,S1) :-
+	code((if,{},fail),S0,S1).
+code(Assert_Op, S0,S1) :-
+	atom_concat('assert_',Op,Assert_Op),
+	member(Op,[eq,neq,lt,gt,le,ge]),
+	atom_concat(if,Op,IF_Op),
+	code((IF_Op,{},fail),S0,S1).
+code(Assert_Cmp_Op, S0,S1) :-
+	atom_concat(assert_cmp,Op,Assert_Cmp_Op),
+	member(Op,[eq,neq,lt,gt,le,ge]),
+	atom_concat(ifcmp,Op,IFCMP_Op),
+	code((IFCMP_Op,{},fail),S0,S1).
+code(assert_none,S0,S1) :-
+	code((if_none,{},fail),S0,S1).
+code((assert_some,'@x'),S0,S1) :-
+	code((if_none,fail,(rename,'@x')),S0,S1).
+code(assert_left,S0,S1) :-
+	code((if_left,(rename,'@x'),fail),S0,S1).
+code(assert_right,S0,S1) :-
+	code((if_left,fail,(rename,'@x')),S0,S1).
+	
+% Syntactic Conveniences
+
+% Pair expressions.
+% Grammar P(\left=A|P(\left)(\right))(\right=I|P(\left)(\right))R
+
+code(PairExp,S0,S1) :-
+	pair_macro(PairExp,Struct),
+	pairCode(Struct,PairCode),
+	code(PairCode,S0,S1).
+	
+% Unpair expressions.
+% Grammar UNP(\left=A|P(\left)(\right))(\right=I|P(\left)(\right))R
+
+code(UnpairExp,S0,S1) :-
+	unpair_macro(UnpairExp,Struct),
+	unpairCode(Struct,UnpairCode),
+	code(UnpairCode,S0,S1).
+	
+% Macro expansions
+
+pair_macro(PairExp,p+LCode+RCode+r) :-
+	PairExp \== pair,
+	atom_concat(p,LeftRight,PairExp),
+	atom_concat(Left,RightR,LeftRight),
+	left(Left,LCode),
+	atom_concat(Right,r,RightR),
+	right(Right,RCode).
+	
+unpair_macro(UnpairExp,un+(p+LCode+RCode+r)) :-
+	UnpairExp \== unpair,
+	atom_concat(unp,LeftRight,UnpairExp),
+	atom_concat(Left,RightR,LeftRight),
+	left(Left,LCode),
+	atom_concat(Right,r,RightR),
+	right(Right,RCode).
+	
+left(a,a).
+left(LeftExp,p+LCode+RCode) :-
+	atom_concat(p,LeftRight,LeftExp),
+	atom_concat(Left,Right,LeftRight),
+	left(Left,LCode),
+	right(Right,RCode).
+	
+right(i,i).
+right(RightExp,p+LCode+RCode) :-
+	atom_concat(p,LeftRight,RightExp),
+	atom_concat(Left,Right,LeftRight),
+	left(Left,LCode),
+	right(Right,RCode).
+	
+% Generate code from (un)pair expressions
+
+pairCode(p+a+i+r,pair).
+pairCode(p+a+R+r, (dip,(RightR;pair))) :-
+	R\==i,
+	pairCode(R+r,RightR).
+pairCode(p+L+i+r, (LeftR;pair)) :-
+	L\==a,
+	pairCode(L+r,LeftR).
+pairCode(p+L+R+r, (LeftR;(dip,(RightR;pair))) ) :-
+	L\==a,R\==i,
+	pairCode(L+r,LeftR),
+	pairCode(R+r,RightR).
+	
+unpairCode(un+(p+a+i+r),unpair).
+unpairCode(un+(p+a+R+r), (unpair; dip,UnRightR)) :-
+	R\==i,
+	unpairCode(un+(R+r),UnRightR).
+unpairCode(un+(p+L+i+r), (unpair; UnLeftR)) :-
+	L\==a,
+	unpairCode(un+(L+r),UnLeftR).
+unpairCode(un+(p+L+R+r), (unpair;(dip,(UnRightR;UnLeftR))) ) :-
+	L\==a,R\==i,
+	unpairCode(un+(L+r),UnLeftR),
+	unpairCode(un+(R+r),UnRightR).
+
+
+	
 
 % Boolean functions
 
@@ -388,6 +526,14 @@ xor(false,false,false).
 
 negate(true,false).
 negate(false,true).
+
+% Execute Michelson source code file F with input Arg
+
+run(F,Arg,Result) :-
+	tz_tokenize(F,T1),
+	parse_toplevel(T1,T2),
+	ast(T2,AST),
+	code(AST,[(Arg,_)],Result).
 
 % Test example 1:  reverse a list.  test1([1,2,3],S)  --> S = [([],[3,2,1])]
 	
@@ -448,11 +594,5 @@ test3(S0,S1) :-
        pair),[(S0,_)],S1).
        
        
-% Get code by parsing Michelson source code file F
 
-test(F,Arg,Result) :-
-	tz_tokenize(F,T1),
-	parse_toplevel(T1,T2),
-	ast(T2,AST),
-	code(AST,[(Arg,_)],Result).
 	
