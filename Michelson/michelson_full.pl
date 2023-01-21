@@ -215,6 +215,11 @@ code(compare,[X,Y|S],[1|S]) :-
 	
 % Operations on strings
 
+code(concat,[X,Y|S],[Z|S]) :-
+	atom(X),
+	atom(Y),
+	atom_concat(X,Y,Z).
+
 % Operations on pairs and right combs
 
 code(pair,[X,Y|S0],[(X,Y)|S0]).
@@ -443,10 +448,16 @@ code(assert_none,S0,S1) :-
 	code((if_none,{},fail),S0,S1).
 code((assert_some,'@x'),S0,S1) :-
 	code((if_none,fail,(rename,'@x')),S0,S1).
-code(assert_left,S0,S1) :-
+code(assert_some,S0,S1) :-
+	code((if_none,fail,{}),S0,S1).
+code((assert_left,'@x'),S0,S1) :-
 	code((if_left,(rename,'@x'),fail),S0,S1).
-code(assert_right,S0,S1) :-
+code(assert_left,S0,S1) :-
+	code((if_left,{},fail),S0,S1).
+code((assert_right,'@x'),S0,S1) :-
 	code((if_left,fail,(rename,'@x')),S0,S1).
+code(assert_right,S0,S1) :-
+	code((if_left,fail,{}),S0,S1).
 	
 % Syntactic Conveniences
 
@@ -643,11 +654,11 @@ negate(false,true).
 
 % Execute Michelson source code file F with input Arg
 
-run(F,Arg,Result) :-
+run(F,Arg,Storage,Result) :-
 	tz_tokenize(F,T1),
 	parse_toplevel(T1,T2),
 	ast(T2,AST),
-	code(AST,[(Arg,_)],Result).
+	code(AST,[(Arg,Storage)],Result).
 
 % Test example 1:  reverse a list.  test1([1,2,3],S)  --> S = [([],[3,2,1])]
 	
