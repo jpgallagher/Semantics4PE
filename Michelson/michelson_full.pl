@@ -4,6 +4,9 @@
 :- use_module(ciao_tezos(micheline/micheline_parser)).
 :- use_module(ciao_tezos(parser/ast)).
 
+:- use_module(library(write), [writeq/1]).
+:- use_module(engine(io_basic), [nl/0]).
+
 % See https://tezos.gitlab.io/active/michelson.html for Michelson language definition.
 
 % Control structures
@@ -34,6 +37,7 @@ code((dip,N,Code),[X|S0],[X|S1]) :-
 code((dip,0,Code),S0,S1) :-
 	code(Code,S0,S1).
 code(exec,[A,F|S0],[R|S0]) :-
+	write([A,F|S0]),nl,
 	code(F,[A],[R]).
 code(apply,[A,F|S0],S1) :-
 	code(((push,_TypeA,A);pair;F),S0,S1).  	% TypeA is the type of A
@@ -69,7 +73,7 @@ code((dug,N),[X,Y|S0],[Y|S1]) :-
 code((dug,0),S,S).
 code((push,_TX,X),S,[X|S]).				% TX is the type of X
 code((lambda,_TA,_TB,Code),S,[Code|S]).	% Code has type TA->TB
-code((lambda_rec,TA,TB,Code),S,[((lambda_rec,TA,TB,Code);Code)|S]).% Code has type TA->TB
+code((lambda_rec,TA,TB,Code),S,[((lambda_rec,TA,TB,Code);Code)|S]). % Code has type TA->TB
 
 % Generic Comparison
 
@@ -583,9 +587,7 @@ unwind(ADExpr,d+CadrCode) :-
 	atom_concat(d,Rest,ADExpr),
 	unwind(Rest,CadrCode).
 	
-
-
-% Generate code from (un)pair expressions
+% Generate code from parsed macro expressions
 
 pairCode(p+a+i+r,pair).
 pairCode(p+a+R+r, (dip,(RightR;pair))) :-
@@ -718,7 +720,7 @@ test3(S0,S1) :-
        eq; (if,(iter,add),drop); (nil, operation);
        pair),[(S0,_)],S1).
        
-% factorial
+% factorial.  Slightly modified from https://tezos.gitlab.io/active/michelson.html
 
 test4(S0,S1) :-
 	code(
