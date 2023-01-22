@@ -1,0 +1,574 @@
+:-module(michelson_full,_).
+:-use_module(ciao_tezos(micheline/micheline_lexer)).
+:-use_module(ciao_tezos(micheline/micheline_parser)).
+:-use_module(ciao_tezos(parser/ast)).
+:-use_module(library(write),[writeq/1]).
+:-use_module(engine(io_basic),[nl/0]).
+logen(code/3,code(failwith,[_|_],['FAILED'])).
+logen(code/3,code(_,['FAILED'],['FAILED'])).
+logen(code/3,code({},A,A)).
+logen(code/3,code((C;D),A,B)) :-
+    logen(memo,code(C,A,E)),
+    logen(memo,code(D,E,B)).
+logen(code/3,code((if,B,_),[true|C],A)) :-
+    logen(memo,code(B,C,A)).
+logen(code/3,code((if,_,B),[false|C],A)) :-
+    logen(memo,code(B,C,A)).
+logen(code/3,code((loop,B),[true|C],A)) :-
+    logen(memo,code((B;loop,B),C,A)).
+logen(code/3,code((loop,_),[false|A],A)).
+logen(code/3,code((loop_left,B),[left(D)|C],A)) :-
+    logen(memo,code((B;loop_left,B),[D|C],A)).
+logen(code/3,code((loop_left,_),[right(B)|A],[B|A])).
+logen(code/3,code((dip,A),[B|C],[B|D])) :-
+    logen(memo,code(A,C,D)).
+logen(code/3,code((dip,A,B),[C|D],[C|E])) :-
+    logen(call,number(A)),
+    logen(call,A>0),
+    logen(call,F is A-1),
+    logen(memo,code((dip,F,B),D,E)).
+logen(code/3,code((dip,0,C),A,B)) :-
+    logen(memo,code(C,A,B)).
+logen(code/3,code(exec,[A,B|C],[D|C])) :-
+    logen(memo,code(B,[A],[D])).
+logen(code/3,code(apply,[B,C|D],A)) :-
+    logen(memo,code((push,_,B;pair;C),D,A)).
+logen(code/3,code(drop,[_|A],A)).
+logen(code/3,code((drop,B),[_|C],A)) :-
+    logen(call,number(B)),
+    logen(call,B>0),
+    logen(call,D is B-1),
+    logen(memo,code((drop,D),C,A)).
+logen(code/3,code((drop,0),A,A)).
+logen(code/3,code(dup,[A|B],[A,A|B])).
+logen(code/3,code((dup,A),[B|C],[D,B|C])) :-
+    logen(call,number(A)),
+    logen(call,A>1),
+    logen(call,E is A-1),
+    logen(memo,code((dup,E),C,[D|C])).
+logen(code/3,code((dup,1),[A|B],[A,A|B])).
+logen(code/3,code(swap,[A,B|C],[B,A|C])).
+logen(code/3,code((dig,A),[B|C],[D,B|E])) :-
+    logen(call,number(A)),
+    logen(call,A>0),
+    logen(call,F is A-1),
+    logen(memo,code((dig,F),C,[D|E])).
+logen(code/3,code((dig,0),A,A)).
+logen(code/3,code((dug,A),[B,C|D],[C|E])) :-
+    logen(call,number(A)),
+    logen(call,A>0),
+    logen(call,F is A-1),
+    logen(memo,code((dug,F),[B|D],E)).
+logen(code/3,code((dug,0),A,A)).
+logen(code/3,code((push,_,B),A,[B|A])).
+logen(code/3,code((lambda,_,_,B),A,[B|A])).
+logen(code/3,code((lambda_rec,B,C,D),A,[(lambda_rec,B,C,D;D)|A])).
+logen(code/3,code(eq,[0|A],[true|A])).
+logen(code/3,code(eq,[A|B],[false|B])) :-
+    logen(rescall,number(A)),
+    logen(rescall,A\==0).
+logen(code/3,code(neq,[0|A],[false|A])).
+logen(code/3,code(neq,[A|B],[true|B])) :-
+    logen(rescall,number(A)),
+    logen(rescall,A\==0).
+logen(code/3,code(lt,[A|B],[true|B])) :-
+    logen(rescall,number(A)),
+    logen(rescall,A<0).
+logen(code/3,code(lt,[A|B],[false|B])) :-
+    logen(rescall,number(A)),
+    logen(rescall,A>=0).
+logen(code/3,code(gt,[A|B],[true|B])) :-
+    logen(rescall,number(A)),
+    logen(rescall,A>0).
+logen(code/3,code(gt,[A|B],[false|B])) :-
+    logen(rescall,number(A)),
+    logen(rescall,A=<0).
+logen(code/3,code(le,[A|B],[true|B])) :-
+    logen(rescall,number(A)),
+    logen(rescall,A=<0).
+logen(code/3,code(le,[A|B],[false|B])) :-
+    logen(rescall,number(A)),
+    logen(rescall,A>0).
+logen(code/3,code(ge,[A|B],[true|B])) :-
+    logen(rescall,number(A)),
+    logen(rescall,A>=0).
+logen(code/3,code(ge,[A|B],[false|B])) :-
+    logen(rescall,number(A)),
+    logen(rescall,A<0).
+logen(code/3,code(unit,A,[unit|A])).
+logen(code/3,code(compare,[unit,unit|A],[0|A])).
+logen(code/3,code(or,[A,B|C],[D|C])) :-
+    logen(memo,or(A,B,D)).
+logen(code/3,code(and,[A,B|C],[D|C])) :-
+    logen(memo,and(A,B,D)).
+logen(code/3,code(xor,[A,B|C],[D|C])) :-
+    logen(memo,xor(A,B,D)).
+logen(code/3,code(not,[A|B],[C|B])) :-
+    logen(memo,negate(A,C)).
+logen(code/3,code(compare,[false,false|A],[0|A])).
+logen(code/3,code(compare,[false,true|A],[-1|A])).
+logen(code/3,code(compare,[true,false|A],[1|A])).
+logen(code/3,code(compare,[true,true|A],[0|A])).
+logen(code/3,code(neg,[A|B],[C|B])) :-
+    logen(rescall,number(A)),
+    logen(rescall,C is-A).
+logen(code/3,code(abs,[A|B],[C|B])) :-
+    logen(rescall,number(A)),
+    logen(rescall,C is abs(A)).
+logen(code/3,code(isnat,[A|B],[some(A)|B])) :-
+    logen(rescall,integer(A)),
+    logen(rescall,A>=0).
+logen(code/3,code(isnat,[A|B],[none|B])) :-
+    logen(rescall,integer(A)),
+    logen(rescall,A<0).
+logen(code/3,code(int,[A|B],[A|B])).
+logen(code/3,code(add,[A,B|C],[D|C])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(B)),
+    logen(rescall,D is A+B).
+logen(code/3,code(sub,[A,B|C],[D|C])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(B)),
+    logen(rescall,D is A-B).
+logen(code/3,code(mul,[A,B|C],[D|C])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(B)),
+    logen(rescall,D is A*B).
+logen(code/3,code(ediv,[_,0|A],[none|A])).
+logen(code/3,code(ediv,[A,B|C],[some((D,E))|C])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(B)),
+    logen(rescall,D is A//B),
+    logen(rescall,E is A mod B).
+logen(code/3,code(or,[A,B|C],[D|C])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(B)),
+    logen(rescall,D is A\/B).
+logen(code/3,code(and,[A,B|C],[D|C])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(B)),
+    logen(rescall,D is A/\B).
+logen(code/3,code(xor,[A,B|C],[D|C])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(B)),
+    logen(rescall,D is A#B).
+logen(code/3,code(not,[A|B],[C|B])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(C)),
+    logen(rescall,C is\A).
+logen(code/3,code(lsl,[A,B|C],[D|C])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(B)),
+    logen(rescall,B=<256),
+    logen(rescall,D is A<<B).
+logen(code/3,code(lsl,[A,B|_],['FAILED'])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(B)),
+    logen(rescall,B>256).
+logen(code/3,code(lsr,[A,B|C],[D|C])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(B)),
+    logen(rescall,B=<256),
+    logen(rescall,D is A>>B).
+logen(code/3,code(lsr,[A,B|_],['FAILED'])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(B)),
+    logen(rescall,B>256).
+logen(code/3,code(compare,[A,B|C],[-1|C])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(B)),
+    logen(rescall,A<B).
+logen(code/3,code(compare,[A,B|C],[0|C])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(B)),
+    logen(rescall,A is B).
+logen(code/3,code(compare,[A,B|C],[1|C])) :-
+    logen(rescall,number(A)),
+    logen(rescall,number(B)),
+    logen(rescall,A>B).
+logen(code/3,code(concat,[A,B|C],[D|C])) :-
+    logen(rescall,atom(A)),
+    logen(rescall,atom(B)),
+    logen(rescall,atom_concat(A,B,D)).
+logen(code/3,code(pair,[A,B|C],[(A,B)|C])).
+logen(code/3,code((pair,2),[A,B|C],[(A,B)|C])).
+logen(code/3,code((pair,A),[B|C],[(B,E)|D])) :-
+    logen(call,A>2),
+    logen(call,F is A-1),
+    logen(memo,code((pair,F),C,[E|D])).
+logen(code/3,code(unpair,[(B,C)|A],[B,C|A])).
+logen(code/3,code((unpair,2),[(B,C)|A],[B,C|A])).
+logen(code/3,code((unpair,A),[(C,D)|B],[C|E])) :-
+    logen(rescall,A>2),
+    logen(rescall,F is A-1),
+    logen(memo,code((unpair,F),[D|B],E)).
+logen(code/3,code(car,[(B,_)|A],[B|A])).
+logen(code/3,code(cdr,[(_,B)|A],[B|A])).
+logen(code/3,code((get,0),[A|B],[A|B])).
+logen(code/3,code((get,1),[(B,_)|A],[B|A])).
+logen(code/3,code((get,B),[(_,D)|C],A)) :-
+    logen(rescall,B>1),
+    logen(rescall,E is B-2),
+    logen(memo,code((get,E),[D|C],A)).
+logen(code/3,code((update,0),[A,_|B],[A|B])).
+logen(code/3,code((update,1),[(B,_,C)|A],[(B,C)|A])).
+logen(code/3,code((update,A),[B,(D,E)|C],[(D,F)|C])) :-
+    logen(rescall,A>1),
+    logen(rescall,G is A-2),
+    logen(memo,code((update,G),[B,E|C],[F|C])).
+logen(code/3,code(compare,[(A,_),(C,_)|B],[-1|B])) :-
+    logen(memo,code(compare,[A,C|B],[-1|B])).
+logen(code/3,code(compare,[(A,_),(C,_)|B],[1|B])) :-
+    logen(memo,code(compare,[A,C|B],[1|B])).
+logen(code/3,code(compare,[(A,B),(D,E)|C],[F|C])) :-
+    logen(memo,code(compare,[A,D|C],[0|C])),
+    logen(memo,code(compare,[B,E|C],[F|C])).
+logen(code/3,code((empty_set,_),A,[[]|A])).
+logen(code/3,code(mem,[_,[]|A],[false|A])).
+logen(code/3,code(mem,[A,[C|D]|B],[E|B])) :-
+    logen(memo,code(compare,[A,C],[1])),
+    logen(memo,code(mem,[A,D|B],[E|B])).
+logen(code/3,code(mem,[A,[C|_]|B],[true|B])) :-
+    logen(memo,code(compare,[A,C],[0])).
+logen(code/3,code(mem,[A,[C|_]|B],[false|B])) :-
+    logen(memo,code(compare,[A,C],[-1])).
+logen(code/3,code(update,[_,false,[]|A],[[]|A])).
+logen(code/3,code(update,[A,true,[]|B],[[A]|B])).
+logen(code/3,code(update,[A,B,[D|E]|C],[[D|F]|C])) :-
+    logen(memo,code(compare,[A,D],[1])),
+    logen(memo,code(update,[A,B,E|C],[F|C])).
+logen(code/3,code(update,[A,false,[C|D]|B],[D|B])) :-
+    logen(memo,code(compare,[A,C],[0])).
+logen(code/3,code(update,[A,true,[C|D]|B],[[C|D]|B])) :-
+    logen(memo,code(compare,[A,C],[0])).
+logen(code/3,code(update,[A,false,[C|D]|B],[[C|D]|B])) :-
+    logen(memo,code(compare,[A,C],[-1])).
+logen(code/3,code(update,[A,true,[C|D]|B],[[A,C|D]|B])) :-
+    logen(memo,code(compare,[A,C],[-1])).
+logen(code/3,code((empty_map,_,_),A,[[]|A])).
+logen(code/3,code(get,[_,[]|A],[none|A])).
+logen(code/3,code(get,[A,[element(D,_)|C]|B],[E|B])) :-
+    logen(memo,code(compare,[A,D],[1])),
+    logen(memo,code(get,[A,C|B],[E|B])).
+logen(code/3,code(get,[A,[element(C,D)|_]|B],[some(D)|B])) :-
+    logen(memo,code(compare,[A,C],[0])).
+logen(code/3,code(get,[A,[element(C,_)|_]|B],[none|B])) :-
+    logen(memo,code(compare,[A,C],[-1])).
+logen(code/3,code(mem,[_,[]|A],[false|A])).
+logen(code/3,code(mem,[A,[element(D,_)|C]|B],[E|B])) :-
+    logen(memo,code(compare,[A,D],[1])),
+    logen(memo,code(mem,[A,C|B],[E|B])).
+logen(code/3,code(mem,[A,[element(C,_)|_]|B],[true|B])) :-
+    logen(memo,code(compare,[A,C],[0])).
+logen(code/3,code(mem,[A,[element(C,_)|_]|B],[false|B])) :-
+    logen(memo,code(compare,[A,C],[-1])).
+logen(code/3,code(update,[_,none,[]|A],[[]|A])).
+logen(code/3,code(update,[A,some(B),[]|C],[[element(A,B)]|C])).
+logen(code/3,code(update,[A,B,[element(E,F)|D]|C],[[element(E,F)|G]|C])) :-
+    logen(memo,code(compare,[A,E],[1])),
+    logen(memo,code(update,[A,B,D|C],[G|C])).
+logen(code/3,code(update,[A,none,[element(D,_)|C]|B],[C|B])) :-
+    logen(memo,code(compare,[A,D],[0])).
+logen(code/3,code(update,[A,some(B),[element(E,_)|D]|C],[[element(E,B)|D]|C])) :-
+    logen(memo,code(compare,[A,E],[0])).
+logen(code/3,code(update,[A,none,[element(D,E)|C]|B],[[element(D,E)|C]|B])) :-
+    logen(memo,code(compare,[A,D],[-1])).
+logen(code/3,code(update,[A,some(B),[element(E,F)|D]|C],[[element(A,B),element(E,F),B|D]|C])) :-
+    logen(memo,code(compare,[A,E],[-1])).
+logen(code/3,code(get_and_update,[_,none,[]|A],[none,[]|A])).
+logen(code/3,code(get_and_update,[A,some(B),[]|C],[none,[element(A,B)]|C])).
+logen(code/3,code(get_and_update,[A,B,[element(E,F)|D]|C],[G,[element(E,F)|H]|C])) :-
+    logen(memo,code(compare,[A,E],[1])),
+    logen(memo,code(get_and_update,[A,B,D|C],[G,H|C])).
+logen(code/3,code(get_and_update,[A,none,[element(D,E)|C]|B],[some(E),C|B])) :-
+    logen(memo,code(compare,[A,D],[0])).
+logen(code/3,code(get_and_update,[A,some(B),[element(E,F)|D]|C],[some(F),[element(E,B)|D]|C])) :-
+    logen(memo,code(get_and_update,[A,E],[0])).
+logen(code/3,code(get_and_update,[A,none,[element(D,E)|C]|B],[none,[element(D,E)|C]|B])) :-
+    logen(memo,code(compare,[A,D],[-1])).
+logen(code/3,code(get_and_update,[A,some(B),[element(E,F)|D]|C],[[none,element(A,B),element(E,F),B|D]|C])) :-
+    logen(memo,code(compare,[A,E],[-1])).
+logen(code/3,code((map,_),[[]|A],[[]|A])).
+logen(code/3,code((map,A),[[element(D,E)|C]|B],[[element(D,H)|G]|F])) :-
+    logen(memo,code(A,[(D,E)|B],[H|I])),
+    logen(memo,code((map,A),[C|I],[G|F])).
+logen(code/3,code((empty_big_map,_,_),A,[[]|A])).
+logen(code/3,code(some,[A|B],[some(A)|B])).
+logen(code/3,code(none,A,[none|A])).
+logen(code/3,code((if_none,B,_),[none|C],A)) :-
+    logen(memo,code(B,C,A)).
+logen(code/3,code((if_none,_,B),[some(D)|C],A)) :-
+    logen(memo,code(B,[D|C],A)).
+logen(code/3,code(compare,[none,none|A],[0|A])).
+logen(code/3,code(compare,[none,some(_)|A],[-1|A])).
+logen(code/3,code(compare,[some(_),none|A],[1|A])).
+logen(code/3,code(compare,[some(B),some(D)|C],A)) :-
+    logen(memo,code(compare,[B,D|C],A)).
+logen(code/3,code((map,_),[none|A],[none|A])).
+logen(code/3,code((map,A),[some(C)|B],[some(E)|D])) :-
+    logen(memo,code(A,[C|B],[E|D])).
+logen(code/3,code(left,[A|B],[left(A)|B])).
+logen(code/3,code(right,[A|B],[right(A)|B])).
+logen(code/3,code((if_left,B,_),[left(D)|C],A)) :-
+    logen(memo,code(B,[D|C],A)).
+logen(code/3,code((if_left,_,B),[right(D)|C],A)) :-
+    logen(memo,code(B,[D|C],A)).
+logen(code/3,code(compare,[left(B),left(D)|C],A)) :-
+    logen(memo,code(compare,[B,D|C],A)).
+logen(code/3,code(compare,[left(_),right(_)|A],[-1|A])).
+logen(code/3,code(compare,[right(_),left(_)|A],[1|A])).
+logen(code/3,code(compare,[right(B),right(D)|C],A)) :-
+    logen(memo,code(compare,[B,D|C],A)).
+logen(code/3,code(cons,[A,B|C],[[A|B]|C])).
+logen(code/3,code((nil,_),A,[[]|A])).
+logen(code/3,code((if_cons,B,_),[[D|E]|C],A)) :-
+    logen(memo,code(B,[D,E|C],A)).
+logen(code/3,code((if_cons,_,B),[[]|C],A)) :-
+    logen(memo,code(B,C,A)).
+logen(code/3,code((map,_),[[]|A],[[]|A])).
+logen(code/3,code((map,A),[[C|D]|B],[[F|G]|E])) :-
+    logen(memo,code(A,[C|B],[F|H])),
+    logen(memo,code((map,A),[D|H],[G|E])).
+logen(code/3,code(size,[[]|A],[0|A])).
+logen(code/3,code(size,[[_|B]|A],[C|A])) :-
+    logen(memo,code(size,[B|A],[D|A])),
+    logen(rescall,C is D+1).
+logen(code/3,code((iter,_),[[]|A],A)).
+logen(code/3,code((iter,B),[[D|E]|C],A)) :-
+    logen(memo,code(B,[D|C],F)),
+    logen(memo,code((iter,B),[E|F],A)).
+logen(code/3,code(A,B,C)) :-
+    logen(call,atom(A)),
+    logen(call,atom_concat(cmp,D,A)),
+    logen(call,member(D,[eq,neq,lt,gt,le,ge])),
+    logen(memo,code((compare;D),B,C)).
+logen(code/3,code((C,D,E),A,B)) :-
+    logen(call,atom(C)),
+    logen(call,atom_concat(if,F,C)),
+    logen(call,member(F,[eq,neq,lt,gt,le,ge])),
+    logen(memo,code((F;if,D,E),A,B)).
+logen(code/3,code((C,D,E),A,B)) :-
+    logen(call,atom(C)),
+    logen(call,atom_concat(ifcmp,F,C)),
+    logen(call,member(F,[eq,neq,lt,gt,le,ge])),
+    logen(memo,code((compare;F;if,D,E),A,B)).
+logen(code/3,code(fail,A,B)) :-
+    logen(memo,code((unit;failwith),A,B)).
+logen(code/3,code(assert,A,B)) :-
+    logen(memo,code((if,{},fail),A,B)).
+logen(code/3,code(A,B,C)) :-
+    logen(call,atom(A)),
+    logen(call,atom_concat(assert_,D,A)),
+    logen(call,member(D,[eq,neq,lt,gt,le,ge])),
+    logen(call,atom_concat(if,D,E)),
+    logen(memo,code((E,{},fail),B,C)).
+logen(code/3,code(A,B,C)) :-
+    logen(call,atom(A)),
+    logen(call,atom_concat(assert_cmp,D,A)),
+    logen(call,member(D,[eq,neq,lt,gt,le,ge])),
+    logen(call,atom_concat(ifcmp,D,E)),
+    logen(memo,code((E,{},fail),B,C)).
+logen(code/3,code(assert_none,A,B)) :-
+    logen(memo,code((if_none,{},fail),A,B)).
+logen(code/3,code((assert_some,'@x'),A,B)) :-
+    logen(memo,code((if_none,fail,rename,'@x'),A,B)).
+logen(code/3,code(assert_some,A,B)) :-
+    logen(memo,code((if_none,fail,{}),A,B)).
+logen(code/3,code((assert_left,'@x'),A,B)) :-
+    logen(memo,code((if_left,(rename,'@x'),fail),A,B)).
+logen(code/3,code(assert_left,A,B)) :-
+    logen(memo,code((if_left,{},fail),A,B)).
+logen(code/3,code((assert_right,'@x'),A,B)) :-
+    logen(memo,code((if_left,fail,rename,'@x'),A,B)).
+logen(code/3,code(assert_right,A,B)) :-
+    logen(memo,code((if_left,fail,{}),A,B)).
+logen(code/3,code(A,B,C)) :-
+    logen(unfold,pairMacro(A,D)),
+    logen(unfold,pairCode(D,E)),
+    logen(memo,code(E,B,C)).
+logen(code/3,code(A,B,C)) :-
+    logen(unfold,unpairMacro(A,D)),
+    logen(unfold,unpairCode(D,E)),
+    logen(memo,code(E,B,C)).
+logen(code/3,code(A,B,C)) :-
+    logen(unfold,cadrMacro(A,D)),
+    logen(unfold,cadrCode(D,E)),
+    logen(memo,code(E,B,C)).
+logen(code/3,code((car,C),A,B)) :-
+    logen(call,D is 2*C+1),
+    logen(memo,code((get,D),A,B)).
+logen(code/3,code((cdr,C),A,B)) :-
+    logen(call,D is 2*C),
+    logen(memo,code((get,D),A,B)).
+logen(code/3,code((if_some,C,D),A,B)) :-
+    logen(memo,code((if_none,D,C),A,B)).
+logen(code/3,code((if_right,C,D),A,B)) :-
+    logen(memo,code((if_left,D,C),A,B)).
+logen(code/3,code(set_car,A,B)) :-
+    logen(memo,code((cdr;swap;pair),A,B)).
+logen(code/3,code(set_cdr,A,B)) :-
+    logen(memo,code((car;pair),A,B)).
+logen(code/3,code(A,B,C)) :-
+    logen(unfold,setCadrMacro(A,D)),
+    logen(unfold,setCadrCode(D,E)),
+    logen(memo,code(E,B,C)).
+logen(code/3,code((map_car,C),A,B)) :-
+    logen(memo,code((dup;cdr;dip,(car;C);swap;pair),A,B)).
+logen(code/3,code((map_cdr,C),A,B)) :-
+    logen(memo,code((dup;cdr;C;swap;car;pair),A,B)).
+logen(code/3,code((C,D),A,B)) :-
+    logen(unfold,mapCadrMacro(C,E)),
+    logen(unfold,mapCadrCode(E,D,F)),
+    logen(memo,code(F,A,B)).
+logen(pairMacro/2,pairMacro(A,p+C+B+r)) :-
+    logen(call,atom(A)),
+    logen(call,A\==pair),
+    logen(call,atom_concat(p,D,A)),
+    logen(call,atom_concat(E,F,D)),
+    logen(unfold,left(E,C)),
+    logen(call,atom_concat(G,r,F)),
+    logen(unfold,right(G,B)).
+logen(unpairMacro/2,unpairMacro(A,un+(p+C+B+r))) :-
+    logen(call,atom(A)),
+    logen(call,A\==unpair),
+    logen(call,atom_concat(unp,D,A)),
+    logen(call,atom_concat(E,F,D)),
+    logen(unfold,left(E,C)),
+    logen(rescall,atom_concat(G,r,F)),
+    logen(unfold,right(G,B)).
+logen(left/2,left(a,a)).
+logen(left/2,left(A,p+C+B)) :-
+    logen(call,atom(A)),
+    logen(call,atom_concat(p,D,A)),
+    logen(call,atom_concat(E,F,D)),
+    logen(call,E\==''),
+    logen(unfold,left(E,C)),
+    logen(unfold,right(F,B)).
+logen(right/2,right(i,i)).
+logen(right/2,right(A,p+C+B)) :-
+    logen(call,atom(A)),
+    logen(call,atom_concat(p,D,A)),
+    logen(call,atom_concat(E,F,D)),
+    logen(unfold,left(E,C)),
+    logen(call,E\==''),
+    logen(unfold,right(F,B)).
+logen(cadrMacro/2,cadrMacro(A,c+B+r)) :-
+    logen(call,atom(A)),
+    logen(call,A\==car),
+    logen(call,A\==cdr),
+    logen(call,atom_concat(c,C,A)),
+    logen(call,atom_concat(D,r,C)),
+    logen(unfold,unwind(D,B)).
+logen(setCadrMacro/2,setCadrMacro(A,set_+(c+B+r))) :-
+    logen(call,atom(A)),
+    logen(call,A\==set_car),
+    logen(call,A\==set_cdr),
+    logen(call,atom_concat(set_c,C,A)),
+    logen(call,atom_concat(D,r,C)),
+    logen(unfold,unwind(D,B)).
+logen(mapCadrMacro/2,mapCadrMacro(A,map_+(c+B+r))) :-
+    logen(call,atom(A)),
+    logen(call,A\==map_car),
+    logen(call,A\==map_cdr),
+    logen(call,atom_concat(map_c,C,A)),
+    logen(call,atom_concat(D,r,C)),
+    logen(unfold,unwind(D,B)).
+logen(unwind/2,unwind(a,a)).
+logen(unwind/2,unwind(d,d)).
+logen(unwind/2,unwind(A,a+B)) :-
+    logen(call,atom_concat(a,C,A)),
+    logen(unfold,unwind(C,B)).
+logen(unwind/2,unwind(A,d+B)) :-
+    logen(call,atom_concat(d,C,A)),
+    logen(unfold,unwind(C,B)).
+logen(pairCode/2,pairCode(p+a+i+r,pair)).
+logen(pairCode/2,pairCode(p+a+A+r,(dip,(B;pair)))) :-
+    logen(call,A\==i),
+    logen(unfold,pairCode(A+r,B)).
+logen(pairCode/2,pairCode(p+A+i+r,(B;pair))) :-
+    logen(call,A\==a),
+    logen(unfold,pairCode(A+r,B)).
+logen(pairCode/2,pairCode(p+B+A+r,(C;dip,(D;pair)))) :-
+    logen(call,B\==a),
+    logen(call,A\==i),
+    logen(unfold,pairCode(B+r,C)),
+    logen(unfold,pairCode(A+r,D)).
+logen(unpairCode/2,unpairCode(un+(p+a+i+r),unpair)).
+logen(unpairCode/2,unpairCode(un+(p+a+A+r),(unpair;dip,B))) :-
+    logen(call,A\==i),
+    logen(unfold,unpairCode(un+(A+r),B)).
+logen(unpairCode/2,unpairCode(un+(p+A+i+r),(unpair;B))) :-
+    logen(rescall,A\==a),
+    logen(unfold,unpairCode(un+(A+r),B)).
+logen(unpairCode/2,unpairCode(un+(p+B+A+r),(unpair;dip,(C;D)))) :-
+    logen(call,B\==a),
+    logen(call,A\==i),
+    logen(unfold,unpairCode(un+(B+r),D)),
+    logen(unfold,unpairCode(un+(A+r),C)).
+logen(cadrCode/2,cadrCode(c+a+r,car)).
+logen(cadrCode/2,cadrCode(c+d+r,cdr)).
+logen(cadrCode/2,cadrCode(c+(a+A)+r,(car;B))) :-
+    logen(unfold,cadrCode(c+A+r,B)).
+logen(cadrCode/2,cadrCode(c+(d+A)+r,(cdr;B))) :-
+    logen(unfold,cadrCode(c+A+r,B)).
+logen(setCadrCode/2,setCadrCode(set_+(c+a+r),set_car)).
+logen(setCadrCode/2,setCadrCode(set_+(c+d+r),set_cdr)).
+logen(setCadrCode/2,setCadrCode(set_+(c+(a+A)+r),(dup;dip,(car;B);cdr;swap;pair))) :-
+    logen(unfold,setCadrCode(set_+(c+A+r),B)).
+logen(setCadrCode/2,setCadrCode(set_+(c+(d+A)+r),(dup;dip,(cdr;B);car;pair))) :-
+    logen(unfold,setCadrCode(set_+(c+A+r),B)).
+logen(mapCadrCode/3,mapCadrCode(map_+(c+a+r),A,(map_car,A))).
+logen(mapCadrCode/3,mapCadrCode(map_+(c+d+r),A,(map_cdr,A))).
+logen(mapCadrCode/3,mapCadrCode(map_+(c+(a+B)+r),A,(dup;dip,(car;C);cdr;swap;pair))) :-
+    logen(unfold,mapCadrCode(map_+(c+B+r),A,C)).
+logen(mapCadrCode/3,mapCadrCode(map_+(c+(d+B)+r),A,(dup;dip,(cdr;C);car;pair))) :-
+    logen(unfold,mapCadrCode(map_+(c+B+r),A,C)).
+logen(and/3,and(true,true,true)).
+logen(and/3,and(true,false,false)).
+logen(and/3,and(false,true,false)).
+logen(and/3,and(false,false,false)).
+logen(or/3,or(true,true,true)).
+logen(or/3,or(true,false,true)).
+logen(or/3,or(false,true,true)).
+logen(or/3,or(false,false,false)).
+logen(xor/3,xor(true,true,false)).
+logen(xor/3,xor(true,false,true)).
+logen(xor/3,xor(false,true,true)).
+logen(xor/3,xor(false,false,false)).
+logen(negate/2,negate(true,false)).
+logen(negate/2,negate(false,true)).
+logen(run/4,run(A,B,C,D)) :-
+    logen(call,tz_tokenize(A,E)),
+    logen(call,parse_toplevel(E,F)),
+    logen(call,ast(F,G)),
+    logen(memo,code(G,[(B,C)],D)).
+logen(test1/2,test1(A,B)) :-
+    logen(memo,code((car;nil,int;swap;iter,cons;nil,operation;pair),[(A,_)],B)).
+logen(test2/2,test2(A,B)) :-
+    logen(memo,code((car;nil,string;swap;push,bool,true;loop,if_cons,(cons;swap;push,bool,true),(nil,string;push,bool,false);drop;nil,operation;pair),[(A,_)],B)).
+logen(test3/2,test3(A,B)) :-
+    logen(memo,code((car;unpair;dup;sub;dip,2,push,int,0;eq;if,(iter,add),drop;nil,operation;pair),[(A,_)],B)).
+logen(test4/2,test4(A,B)) :-
+    logen(memo,code((car;lambda_rec,int,int,(dup,2;eq;if,(push,int,1),(dup;push,int,1;dup,4;sub;exec;dup,3;mul);dip,drop,2);swap;exec;nil,operation;pair),[(A,_)],B)).
+:- filter
+    code(static,dynamic,dynamic).
+    
+:- filter
+    and(dynamic,dynamic,dynamic).
+:- filter
+    or(dynamic,dynamic,dynamic).
+:- filter
+    xor(dynamic,dynamic,dynamic).
+:- filter
+    negate(dynamic,dynamic).
+
+:- filter
+    run(static,dynamic,dynamic,dynamic).
+:- filter
+    test1(dynamic,dynamic).
+:- filter
+    test2(dynamic,dynamic).
+:- filter
+    test3(dynamic,dynamic).
+:- filter
+    test4(dynamic,dynamic).
