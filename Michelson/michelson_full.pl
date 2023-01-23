@@ -37,10 +37,9 @@ code((dip,N,Code),[X|S0],[X|S1]) :-
 code((dip,0,Code),S0,S1) :-
 	code(Code,S0,S1).
 code(exec,[A,F|S0],[R|S0]) :-
-	write([A,F|S0]),nl,
+	%write([A,F|S0]),nl,
 	code(F,[A],[R]).
-code(apply,[A,F|S0],S1) :-
-	code(((push,_TypeA,A);pair;F),S0,S1).  	% TypeA is the type of A
+code(apply,[A,F|S0],[((push,_TypeA,A);pair;F)|S0]).	% TypeA is the type of A
 	
 % Stack operations
 	
@@ -133,9 +132,6 @@ code(compare,[false,false|S],[0|S]).
 code(compare,[false,true|S],[-1|S]).
 code(compare,[true,false|S],[1|S]).
 code(compare,[true,true|S],[0|S]).
-
-
-
 
 % Operations on integers and natural numbers
 
