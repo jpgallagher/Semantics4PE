@@ -37,7 +37,6 @@ code((dip,N,Code),[X|S0],[X|S1]) :-
 code((dip,0,Code),S0,S1) :-
 	code(Code,S0,S1).
 code(exec,[A,F|S0],[R|S0]) :-
-	%write([A,F|S0]),nl,
 	code(F,[A],[R]).
 code(apply,[A,F|S0],[((push,_TypeA,A);pair;F)|S0]).	% TypeA is the type of A
 	
@@ -164,6 +163,7 @@ code(ediv,[_X,0|S],[none|S]).
 code(ediv,[X,Y|S],[some((U,V))|S]) :-
 	number(X),
 	number(Y),
+	Y \== 0,
 	U is X // Y,
 	V is mod(X,Y).
 code(or,[X,Y|S],[Z|S]) :-
@@ -592,7 +592,7 @@ pairCode(p+a+R+r, (dip,(RightR;pair))) :-
 pairCode(p+L+i+r, (LeftR;pair)) :-
 	L\==a,
 	pairCode(L+r,LeftR).
-pairCode(p+L+R+r, (LeftR;(dip,(RightR;pair))) ) :-
+pairCode(p+L+R+r, (LeftR;((dip,RightR);pair)) ) :-
 	L\==a,R\==i,
 	pairCode(L+r,LeftR),
 	pairCode(R+r,RightR).
@@ -604,7 +604,7 @@ unpairCode(un+(p+a+R+r), (unpair; dip,UnRightR)) :-
 unpairCode(un+(p+L+i+r), (unpair; UnLeftR)) :-
 	L\==a,
 	unpairCode(un+(L+r),UnLeftR).
-unpairCode(un+(p+L+R+r), (unpair;(dip,(UnRightR;UnLeftR))) ) :-
+unpairCode(un+(p+L+R+r), (unpair;((dip,UnRightR);UnLeftR)) ) :-
 	L\==a,R\==i,
 	unpairCode(un+(L+r),UnLeftR),
 	unpairCode(un+(R+r),UnRightR).
@@ -734,4 +734,4 @@ test4(S0,S1) :-
 	   pair),
 	   [(S0,_)],S1).
 	   
-	
+
