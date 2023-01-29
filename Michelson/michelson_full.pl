@@ -356,6 +356,8 @@ code((map,Body),[some(A)|S0],[some(B)|S1]) :-
 
 code(left,[V|S],[left(V)|S]).
 code(right,[V|S],[right(V)|S]).
+code((left,_T),[V|S],[left(V)|S]).
+code((right,_T),[V|S],[right(V)|S]).
 code((if_left,BT,_BF),[left(A)|S],S1) :-
 	code(BT,[A|S],S1).
 code((if_left,_BT,BF),[right(B)|S],S1) :-
