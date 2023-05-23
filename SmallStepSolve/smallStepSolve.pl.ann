@@ -1,0 +1,116 @@
+:-module(smallStepSolve,_).
+logen(run/1,run([])).
+logen(run/1,run([A|B])) :-
+    logen(memo,smallStep(A,B,C)),
+    logen(memo,run(C)).
+logen(smallStep/3,smallStep(A,B,B)) :-
+    logen(unfold,leaf(A)),
+    logen(unfold,clpClause(A,C)),
+    logen(unfold,callPreds(C)).
+logen(smallStep/3,smallStep(A,B,C)) :-
+    logen(unfold,nonLeaf(A)),
+    logen(unfold,clpClause(A,D)),
+    logen(unfold,evalConditions(D,E)),
+    logen(call,append(E,B,[F|G])),
+    logen(unfold,nextStep(F,G,C)).
+logen(nextStep/3,nextStep(A,B,B)) :-
+    logen(unfold,leaf(A)),
+    logen(memo,smallStep(A,B,B)).
+logen(nextStep/3,nextStep(A,B,C)) :-
+    logen(memo,nonLeaf(A)),
+    logen(memo,smallStep(A,B,C)).
+
+logen(evalConditions/2,evalConditions([],[])).
+logen(evalConditions/2,evalConditions([A|B],[A|B])) :-
+    logen(unfold,bigStepPred(A)).
+logen(evalConditions/2,evalConditions([B|C],A)) :-
+    logen(unfold,otherPred(B)),
+    logen(memo,callPred(B)),
+    logen(unfold,evalConditions(C,A)).
+logen(callPred/1,callPred(A)) :-
+    logen(unfold,constraint(A)),
+    logen(rescall,call(A)).
+logen(callPred/1,callPred(A)) :-
+    logen(unfold,clpClause(A,B)),
+    logen(unfold,callPreds(B)).
+logen(callPreds/1,callPreds([])).
+logen(callPreds/1,callPreds([A|B])) :-
+    logen(memo,callPred(A)),
+    logen(unfold,callPreds(B)).
+logen(bigStepPred/1,bigStepPred(bigstep(_,_,_))).
+logen(bigStepPred/1,bigStepPred(controlExpr(_,_,_,_))).
+logen(otherPred/1,otherPred(A)) :-
+    logen(call,functor(A,B,C)),
+    logen(call,member(B/C,[eval/4,find/3,gt/3,lt/3,gte/3,lte/3,eq/3,negate/2,save/4])).
+logen(otherPred/1,otherPred(A)) :-
+    logen(unfold,constraint(A)).
+logen(leaf/1,leaf(bigstep(skip,_,_))).
+logen(leaf/1,leaf(bigstep(asg(_,_),_,_))).
+logen(leaf/1,leaf(controlExpr(_,_,_,_))).
+logen(nonLeaf/1,nonLeaf(bigstep(seq(_,_),_,_))).
+logen(nonLeaf/1,nonLeaf(bigstep(ifthenelse(_,_,_),_,_))).
+logen(nonLeaf/1,nonLeaf(bigstep(while(_,_),_,_))).
+logen(nonLeaf/1,nonLeaf(bigstep(for(_,_,_,_),_,_))).
+logen(constraint/1,constraint(_=_)).
+logen(constraint/1,constraint(_<_)).
+logen(constraint/1,constraint(_>_)).
+logen(constraint/1,constraint(_=<_)).
+logen(constraint/1,constraint(_>=_)).
+logen(constraint/1,constraint(_ is _)).
+logen(constraint/1,constraint(_=:=_)).
+logen(constraint/1,constraint(_\==_)).
+logen(constraint/1,constraint(_\=_)).
+logen(constraint/1,constraint(true)).
+logen(constraint/1,constraint(fail)).
+logen(clpClause/2,clpClause(eval(var(C),A,A,B),[find(A,C,B)])).
+logen(clpClause/2,clpClause(eval(cns(nat(B)),A,A,B),[])).
+logen(clpClause/2,clpClause(eval(add(D,E),A,B,C),[eval(D,A,F,G),eval(E,F,B,H),C=G+H])).
+logen(clpClause/2,clpClause(eval(sub(D,E),A,B,C),[eval(D,A,F,G),eval(E,F,B,H),C=G-H])).
+logen(clpClause/2,clpClause(eval(mul(D,E),A,B,C),[eval(D,A,F,G),eval(E,F,B,H),C=G*H])).
+logen(clpClause/2,clpClause(eval(div(D,E),A,B,C),[eval(D,A,F,G),eval(E,F,B,H),C=G/H])).
+logen(clpClause/2,clpClause(controlExpr(D>E,A,B,C),[eval(D,A,F,G),eval(E,F,B,H),gt(G,H,C)])).
+logen(clpClause/2,clpClause(controlExpr(D<E,A,B,C),[eval(D,A,F,G),eval(E,F,B,H),lt(G,H,C)])).
+logen(clpClause/2,clpClause(controlExpr(D>=E,A,B,C),[eval(D,A,F,G),eval(E,F,B,H),gte(G,H,C)])).
+logen(clpClause/2,clpClause(controlExpr(D=<E,A,B,C),[eval(D,A,F,G),eval(E,F,B,H),lte(G,H,C)])).
+logen(clpClause/2,clpClause(controlExpr(D==E,A,B,C),[eval(D,A,F,G),eval(E,F,B,H),eq(G,H,C)])).
+logen(clpClause/2,clpClause(controlExpr(logicaland(D,E),A,B,C),[controlExpr(D,A,F,G),controlExpr(E,F,B,H),C is G/\H])).
+logen(clpClause/2,clpClause(controlExpr(not(D),A,B,C),[controlExpr(D,A,B,E),negate(E,C)])).
+logen(clpClause/2,clpClause(bigstep(skip,A,A),[])).
+logen(clpClause/2,clpClause(bigstep(asg(var(D),C),A,B),[eval(C,A,E,F),save(D,F,E,B)])).
+logen(clpClause/2,clpClause(bigstep(seq(C,D),A,B),[bigstep(C,A,E),bigstep(D,E,B)])).
+logen(clpClause/2,clpClause(bigstep(ifthenelse(C,D,_),A,B),[controlExpr(C,A,E,1),bigstep(D,E,B)])).
+logen(clpClause/2,clpClause(bigstep(ifthenelse(C,_,D),A,B),[controlExpr(C,A,E,0),bigstep(D,E,B)])).
+logen(clpClause/2,clpClause(bigstep(while(C,D),A,B),[bigstep(ifthenelse(C,seq(D,while(C,D)),skip),A,B)])).
+logen(clpClause/2,clpClause(bigstep(for(C,D,E,F),A,B),[bigstep(C,A,G),bigstep(while(D,seq(F,E)),G,B)])).
+logen(clpClause/2,clpClause(find([(A,B)|_],A,B),[])).
+logen(clpClause/2,clpClause(find([(D,_)|C],A,B),[A\==D,find(C,A,B)])).
+logen(clpClause/2,clpClause(save(A,B,[(A,_)|C],[(A,D)|C]),[D is B])).
+logen(clpClause/2,clpClause(save(A,B,[(D,E)|C],[(D,E)|F]),[A\==D,save(A,B,C,F)])).
+logen(clpClause/2,clpClause(save(A,B,[],[(A,C)]),[C is B])).
+logen(clpClause/2,clpClause(gt(A,B,1),[A>B])).
+logen(clpClause/2,clpClause(gt(A,B,0),[A=<B])).
+logen(clpClause/2,clpClause(lt(A,B,1),[A<B])).
+logen(clpClause/2,clpClause(lt(A,B,0),[A>=B])).
+logen(clpClause/2,clpClause(gte(A,B,1),[A>=B])).
+logen(clpClause/2,clpClause(gte(A,B,0),[A<B])).
+logen(clpClause/2,clpClause(lte(A,B,1),[A=<B])).
+logen(clpClause/2,clpClause(lte(A,B,0),[A>B])).
+logen(clpClause/2,clpClause(eq(A,B,1),[A==B])).
+logen(clpClause/2,clpClause(eq(A,B,0),[A\==B])).
+logen(clpClause/2,clpClause(negate(true,false),[])).
+logen(clpClause/2,clpClause(negate(false,true),[])).
+logen(test/1,test(A)) :-
+    logen(unfold,exCode(B)),
+    logen(unfold,run([bigstep(B,[(x,5),(y,2),(z,3)],A)])).
+logen(exCode/1,exCode(while(var(x)>cns(nat(0)),asg(var(x),sub(var(x),cns(nat(1))))))).
+
+:- filter
+    run(dynamic).
+:- filter
+    smallStep(dynamic,dynamic,dynamic).
+:- filter
+    callPred(nonvar).
+:- filter
+    leaf(dynamic).
+:- filter
+    nonLeaf(dynamic).
