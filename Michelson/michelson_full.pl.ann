@@ -5,7 +5,7 @@
 :-use_module(library(write),[writeq/1]).
 :-use_module(engine(io_basic),[nl/0]).
 logen(code/3,code(failwith,[_|_],['FAILED'])).
-logen(code/3,code(_,['FAILED'],['FAILED'])).
+%logen(code/3,code(_,['FAILED'],['FAILED'])).
 logen(code/3,code({},A,A)).
 logen(code/3,code((C;D),A,B)) :-
     logen(memo,code(C,A,E)),
@@ -31,8 +31,7 @@ logen(code/3,code((dip,0,C),A,B)) :-
     logen(memo,code(C,A,B)).
 logen(code/3,code(exec,[A,B|C],[D|C])) :-
     logen(memo,code(B,[A],[D])).
-logen(code/3,code(apply,[B,C|D],A)) :-
-    logen(memo,code((push,_,B;pair;C),D,A)).
+logen(code/3,code(apply,[A,B|C],[(push,_,A;pair;B)|C])).
 logen(code/3,code(drop,[_|A],A)).
 logen(code/3,code((drop,B),[_|C],A)) :-
     logen(call,number(B)),
@@ -138,6 +137,7 @@ logen(code/3,code(ediv,[_,0|A],[none|A])).
 logen(code/3,code(ediv,[A,B|C],[some((D,E))|C])) :-
     logen(rescall,number(A)),
     logen(rescall,number(B)),
+    logen(rescall,B\==0),
     logen(rescall,D is A//B),
     logen(rescall,E is A mod B).
 logen(code/3,code(or,[A,B|C],[D|C])) :-
@@ -309,6 +309,8 @@ logen(code/3,code((map,A),[some(C)|B],[some(E)|D])) :-
     logen(memo,code(A,[C|B],[E|D])).
 logen(code/3,code(left,[A|B],[left(A)|B])).
 logen(code/3,code(right,[A|B],[right(A)|B])).
+logen(code/3,code((left,_),[A|B],[left(A)|B])).
+logen(code/3,code((right,_),[A|B],[right(A)|B])).
 logen(code/3,code((if_left,B,_),[left(D)|C],A)) :-
     logen(memo,code(B,[D|C],A)).
 logen(code/3,code((if_left,_,B),[right(D)|C],A)) :-
@@ -488,7 +490,7 @@ logen(pairCode/2,pairCode(p+a+A+r,(dip,(B;pair)))) :-
 logen(pairCode/2,pairCode(p+A+i+r,(B;pair))) :-
     logen(call,A\==a),
     logen(unfold,pairCode(A+r,B)).
-logen(pairCode/2,pairCode(p+B+A+r,(C;dip,(D;pair)))) :-
+logen(pairCode/2,pairCode(p+B+A+r,(C;dip,D;pair))) :-
     logen(call,B\==a),
     logen(call,A\==i),
     logen(unfold,pairCode(B+r,C)),
@@ -498,9 +500,9 @@ logen(unpairCode/2,unpairCode(un+(p+a+A+r),(unpair;dip,B))) :-
     logen(call,A\==i),
     logen(unfold,unpairCode(un+(A+r),B)).
 logen(unpairCode/2,unpairCode(un+(p+A+i+r),(unpair;B))) :-
-    logen(rescall,A\==a),
+    logen(call,A\==a),
     logen(unfold,unpairCode(un+(A+r),B)).
-logen(unpairCode/2,unpairCode(un+(p+B+A+r),(unpair;dip,(C;D)))) :-
+logen(unpairCode/2,unpairCode(un+(p+B+A+r),(unpair;dip,D;C))) :-
     logen(call,B\==a),
     logen(call,A\==i),
     logen(unfold,unpairCode(un+(B+r),D)),
@@ -542,12 +544,14 @@ logen(run/4,run(A,B,C,D)) :-
     logen(call,parse_toplevel(E,F)),
     logen(call,ast(F,G)),
     logen(memo,code(G,[(B,C)],D)).
+logen(main/0,main) :-
+    logen(unfold,run('Tests/fibonacci.tz',B,C,D)).
 logen(test1/2,test1(A,B)) :-
     logen(memo,code((car;nil,int;swap;iter,cons;nil,operation;pair),[(A,_)],B)).
 logen(test2/2,test2(A,B)) :-
     logen(memo,code((car;nil,string;swap;push,bool,true;loop,if_cons,(cons;swap;push,bool,true),(nil,string;push,bool,false);drop;nil,operation;pair),[(A,_)],B)).
 logen(test3/2,test3(A,B)) :-
-    logen(memo,code((car;unpair;dup;sub;dip,2,push,int,0;eq;if,(iter,add),drop;nil,operation;pair),[(A,_)],B)).
+    logen(memo,code((car;unpair;dup;sub;dip,2,push,int,0;ifeq,(iter,add),drop;nil,operation;pair),[(A,_)],B)).
 logen(test4/2,test4(A,B)) :-
     logen(memo,code((car;lambda_rec,int,int,(dup,2;eq;if,(push,int,1),(dup;push,int,1;dup,4;sub;exec;dup,3;mul);dip,drop,2);swap;exec;nil,operation;pair),[(A,_)],B)).
 :- filter
@@ -572,3 +576,5 @@ logen(test4/2,test4(A,B)) :-
     test3(dynamic,dynamic).
 :- filter
     test4(dynamic,dynamic).
+:- filter
+	main.

@@ -1,18 +1,20 @@
-:- module(michelson_full,_).
+%:- module(michelson_full,_).
+:- module(michelson_full,[test1/2,test2/2,test3/2,test4/2]).
 
-:- use_module(ciao_tezos(micheline/micheline_lexer)).
-:- use_module(ciao_tezos(micheline/micheline_parser)).
-:- use_module(ciao_tezos(parser/ast)).
 
-:- use_module(library(write), [writeq/1]).
-:- use_module(engine(io_basic), [nl/0]).
+%:- use_module(ciao_tezos(micheline/micheline_lexer)).
+%:- use_module(ciao_tezos(micheline/micheline_parser)).
+%:- use_module(ciao_tezos(parser/ast)).
+
+%:- use_module(library(write), [writeq/1]).
+%:- use_module(engine(io_basic), [nl/0]).
 
 % See https://tezos.gitlab.io/active/michelson.html for Michelson language definition.
 
 % Control structures
 
 code(failwith, [_|_],['FAILED']).
-code(_,['FAILED'],['FAILED']).
+%code(_,['FAILED'],['FAILED']).
 code({}, S,S).
 code((Ins;Insns),S0,S) :- 
 	code(Ins,S0,S1), 
@@ -174,10 +176,10 @@ code(and,[X,Y|S],[Z|S]) :-
 	number(X),
 	number(Y),
 	Z is X /\ Y.
-code(xor,[X,Y|S],[Z|S]) :-
-	number(X),
-	number(Y),
-	Z is X # Y.
+%code(xor,[X,Y|S],[Z|S]) :-
+%	number(X),
+%	number(Y),
+%	Z is X # Y.
 code(not,[X|S],[Y|S]) :-
 	number(X),
 	number(Y),
@@ -654,11 +656,13 @@ negate(false,true).
 
 % Execute Michelson source code file F with input Arg
 
+/*
 run(F,Arg,Storage,Result) :-
 	tz_tokenize(F,T1),
 	parse_toplevel(T1,T2),
 	ast(T2,AST),
 	code(AST,[(Arg,Storage)],Result).
+*/
 
 % Test example 1:  reverse a list.  test1([1,2,3],S)  --> S = [([],[3,2,1])]
 	
@@ -715,7 +719,7 @@ test3(S0,S1) :-
        dup;
        sub;
        (dip, 2, (push,int,0));
-       eq; (if,(iter,add),drop); (nil, operation);
+       (ifeq,(iter,add),drop); (nil, operation);
        pair),[(S0,_)],S1).
        
 % factorial.  Slightly modified from https://tezos.gitlab.io/active/michelson.html
