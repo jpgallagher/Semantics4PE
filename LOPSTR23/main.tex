@@ -1,0 +1,325 @@
+%\documentclass[11pt]{article}
+\documentclass{llncs}
+
+\usepackage{graphicx}
+\usepackage{amsmath} 
+
+\pagenumbering{arabic}
+
+\newcommand{\integ}{{\sf int}}
+\newcommand{\listint}{{\sf listint}}
+\newcommand{\other}{{\sf other}}
+\newcommand{\true}{\mathsf {true}}
+\newcommand{\false}{\mathsf {false}}
+\newcommand{\Res}{{\sf Res}}
+\newcommand{\Bin}{{\sf Bin}}
+\newcommand{\Dep}{{\sf Dep}}
+\newcommand{\g}{{\sf g}}
+\newcommand{\nong}{{\sf ng}}
+\newcommand{\OL}{{\cal O}}
+%\newcommand{\mgu}{{\sf mgu}}
+\newcommand{\M}{{\sf M}}
+\newcommand{\R}{{\cal R}}
+\newcommand{\A}{{\cal A}}
+
+\newcommand{\B}{{\cal B}}
+\newcommand{\C}{{\cal C}}
+\newcommand{\D}{{\cal D}}
+\newcommand{\X}{{\cal X}}
+\newcommand{\V}{{\cal V}}
+\newcommand{\Q}{{\cal Q}}
+\newcommand{\F}{{\sf F}}
+\newcommand{\N}{{\cal N}}
+\newcommand{\Lang}{{\cal L}}
+\newcommand{\powerset}{{\cal P}}
+\newcommand{\FTA}{{\cal FT\!A}}
+\newcommand{\Term}{{\sf Term}}
+\newcommand{\Empty}{{\sf empty}}
+\newcommand{\nonEmpty}{{\sf nonempty}}
+\newcommand{\compl}{{\sf complement}}
+\newcommand{\args}{{\sf args}}
+\newcommand{\preds}{{\sf preds}}
+\newcommand{\gnd}{{\sf gnd}}
+\newcommand{\lfp}{{\sf lfp}}
+\newcommand{\psharp}{P^{\sharp}}
+\newcommand{\minimize}{{\sf minimize}}
+\newcommand{\headterms}{\mathsf{headterms}}
+\newcommand{\solvebody}{\mathsf{solvebody}}
+\newcommand{\solve}{\mathsf{solve}}
+\newcommand{\fail}{\mathsf{fail}}
+\newcommand{\member}{\mathsf{memb}}
+\newcommand{\ground}{\mathsf{ground}}
+
+
+
+\newcommand{\transitions}{\mathsf{transitions}}
+\newcommand{\nonempty}{\mathsf{nonempty}}
+\newcommand{\dom}{\mathsf{dom}}
+
+
+\newcommand{\Args}{\mathsf{Args}}
+\newcommand{\id}{\mathsf{id}}
+\newcommand{\type}{\tau}
+\newcommand{\restrict}{\mathsf{restrict}}
+%\newcommand{\any}{\mathsf{any}}
+\newcommand{\any}{\top}
+\newcommand{\dyn}{\top}
+\newcommand{\dettypes}{{\sf dettypes}}
+\newcommand{\Atom}{{\sf Atom}}
+
+
+\newcommand{\vars}{\mathsf{vars}}
+\newcommand{\Vars}{\mathsf{Vars}}
+\newcommand{\range}{\mathsf{range}}
+\newcommand{\varpos}{\mathsf{varpos}}
+\newcommand{\varid}{\mathsf{varid}}
+\newcommand{\argpos}{\mathsf{argpos}}
+\newcommand{\elim}{\mathsf{elim}}
+\newcommand{\pred}{\mathsf{pred}}
+\newcommand{\predfuncs}{\mathsf{predfuncs}}
+\newcommand{\project}{\mathsf{project}}
+\newcommand{\reduce}{\mathsf{reduce}}
+\newcommand{\positions}{\mathsf{positions}}
+\newcommand{\contained}{\preceq}
+\newcommand{\equivalent}{\cong}
+\newcommand{\unify}{{\it unify}}
+\newcommand{\Iff}{{\rm iff}}
+%\newcommand{\And}{{\rm and}}
+\newcommand{\Where}{{\rm where}}
+\newcommand{\State}{\mathsf{S}}
+\newcommand{\qmap}{{\sf qmap}}
+\newcommand{\fmap}{{\sf fmap}}
+\newcommand{\ftable}{{\sf ftable}}
+\newcommand{\Qmap}{{\sf Qmap}}
+\newcommand{\states}{{\sf states}}
+\newcommand{\head}{\tau}
+
+\newcommand{\keyword}[1]{\mathsf{#1}}
+\newcommand{\SKIP}{\keyword{skip}}
+\newcommand{\RET}[1]{\keyword{return}\,#1}
+\newcommand{\ASG}[2]{#1 := #2}
+\newcommand{\SEQ}[2]{#1\,{;}\,#2}
+\newcommand{\IFNZ}[3]{\keyword{if} \,(#1)\, #2\,\keyword{else}\,#3}
+\newcommand{\WHILE}[2]{\keyword{while} \,(#1)\, #2}
+
+
+\usepackage{listings} 
+\usepackage{courier}
+\lstset{
+%
+%
+  %
+  stringstyle=\ttfamily,
+  showstringspaces = false,
+  basicstyle=\linespread{0.9}\small\ttfamily,
+  commentstyle=\small\emph,
+  keywordstyle=\small\bfseries,
+  %
+  numbers=none,
+  mathescape=true,
+  numbersep=3pt,
+  numberstyle=\tiny,
+  numberfirstline=true,
+  breaklines=true,
+  language=C,
+  xleftmargin=1em,
+  morekeywords={if,then,else,do,return,length,let,seq,asg,function,call,ret,ifthenelse,block},
+  deletekeywords={static,struct,call},
+  columns=[l]flexible
+}
+
+\def\ll{[\![}
+\def\rr{]\!]}
+
+\newcommand{\todo}[1]{\textbf{**}\marginpar{\fbox{
+\begin{minipage}{\oddsidemargin}
+\textsf{{\small#1}}
+\end{minipage}
+}}}
+
+\newcommand{\sset}[2]{\left\{~#1  \left|
+                               \begin{array}{l}#2\end{array}
+                          \right.     \right\}}
+
+
+\newcommand{\qin}{\hspace*{0.15in}}
+\newenvironment{SProg}
+     {\begin{small}\begin{tt}\begin{tabular}[t]{l}}%
+     {\end{tabular}\end{tt}\end{small}}
+\def\anno#1{{\ooalign{\hfil\raise.07ex\hbox{\small{\rm #1}}\hfil%
+        \crcr\mathhexbox20D}}}
+
+
+\title{Transforming big-step to small-step semantics using interpreter specialisation}
+
+
+\author{John P. Gallagher \thanks{Email. \texttt{jpg@ruc.dk}}\inst{1}\inst{2}
+\and
+Manuel Hermenegildo\inst{2}  \and Jos\'e Morales
+\inst{2} \and Pedro L\'opez Garc\'ia\inst{2} 
+}
+
+\institute{Roskilde University, Denmark
+\and
+IMDEA Software Institute, Madrid, Spain}
+
+
+\begin{document}
+\maketitle
+\input{abstract}
+
+\pagestyle{plain}
+\pagestyle{myheadings}
+
+\section{Introduction}
+
+The goal of this work is to transform big-step operational semantics to small-step operational semantics.
+This has previously been studied \cite{Vesely-Fisher,Hulzing,Ambal}, as has the related problem of deriving abstract
+machines from big-step semantics \cite{Ager}. The main novelty is the method, which we consider to be more
+direct and more easily verifiable than previous approaches.  We formulate the transformation as the specialisation of a
+linearising interpreter for big-step semantic rules.  Once a suitable interpreter has been written, in which the general
+definition of a ``small step" has been encoded, the transformation
+consists of partially evaluating it with respect to given big-step semantics.  The specialised interpreter contains the 
+small-step transition rules, 
+with minor syntactic modification. We describe experiments using an off-the shelf partial evaluator 
+for logic programs \cite{Logen}.
+
+In Section \ref{background} we review the notions of big-step and small-step operational semantics, and
+the essential concepts behind program transformation using interpreter specialisation, with focus on interpreters for
+Horn clause programs.
+
+\section{Background}
+
+\subsection{Operational Semantics}
+The operational semantics of a program is usually defined in one of two styles, 
+which are called \emph{natural semantics} and \emph{structural operational semantics}~\cite{NielsonN1992}.
+Natural semantics (NS) was explicitly proposed by Kahn in the 
+1980s \cite{Kahn87}; the name indicates an analogy with natural deduction. 
+Structural operational semantics (SOS) was formulated by Plotkin \cite{Plotkin1981,Plotkin04a}, 
+who later wrote an account of the origins of SOS \cite{Plotkin04}.  The motivation of SOS was to define
+``machine-like" execution of programs, but in a syntax-directed style, omitting all unnecessary details of
+the machine.  Both styles have their advantages, which we do not discuss in detail here.
+
+The nicknames \emph{big-step} and \emph{small-step} for NS and SOS respectively have been used
+since at least the early 1990s, and we use them in the rest of the paper, since they neatly
+express the difference between NS and SOS.  Both approaches define the behaviour of a program
+as runs in a transition system, whose configurations are of the form $\langle s, \sigma\rangle$ where $s$ is a
+syntactic expression (such as a statement) and $\sigma$ is a program state; sometimes $s$ is omitted when it is empty
+or a halt statement.  
+
+In big-step semantics, transitions are of the form $\langle s, \sigma\rangle \Rightarrow \sigma'$, 
+which means that $s$ is completely executed in state $\sigma$, terminating in final state $\sigma'$.
+The name \emph{big-step} semantics arises since the transition for a statement goes from the initial to the final state.  
+%
+By contrast, in small-step semantics, a transition has the form $\langle s, \sigma\rangle \rightarrow \langle s',\sigma'\rangle$, 
+which defines a single step
+that moves from $s$ in state $\sigma$ to the \emph{next} statement $s'$ and next state $\sigma'$. We may also have a transition
+$\langle s, \sigma\rangle \rightarrow \sigma'$ for the case that $s$ terminates in one step.
+A computation or run is defined as a 
+chain of small steps.  Note that we use $\Rightarrow$ and $\rightarrow$ for big and small-step transitions respectively.
+
+\subsection{Interpreter specialisation}
+
+The idea of specialising a program with respect to partial input,  known as program specialisation, partial evaluation or mixed computation, 
+originated in the 1960s \cite{Lombardi,Ershov}.  In 1971, Futamura discussed the specialisation of interpreters, and its connection to compilers and compiler 
+generators \cite{Futamura71}.  In particular, the specialisation of a program interpreter with respect to an object program,  but with unknown
+program state (known as the first Futamura projection) is analogous to compilation of the object 
+program into the language in which the interpreter is written.  
+When the interpreter is written in the same language as that of the object program,
+the result of specialisation may be viewed as a source transformation of the object program 
+(whereas it is in fact a transformation of the interpreter). 
+The transformation can be regarded as the imposition of (possibly non-standard) semantics encoded in the
+interpreter onto the object program. 
+This idea was exploited to transform programs, \cite{Gallagher,Turchin,Glueck,Jones,Giacobazzi}, and can result in deep changes in program structure, 
+possibly yielding superlinear speedups, in contrast to partial evaluation itself, which gives only linear speedups and does not fundamentally alter program
+structure.  Furthermore, it has been shown that some established program transformations such as deforestation
+can be realised as interpreter specialisation \cite{Glueck}.  A transformation technique for logic programs with a similar 
+aim, \emph{compiling control} \cite{BruynoogheDeS},
+has also been shown to be realisable as interpreter specialisation \cite{Nys}.
+
+The idea of transformation by interpreter specialisation is thus well known, yet its potential has not been fully realised, probably due to the 
+fact that effective specialisation of complex interpreters is beyond the power of general purpose program specialisers and needs 
+further research \cite{GallagherGlueck}.
+
+\subsection{Horn clause representation of semantics and interpreters}
+
+Both big-step and small-step transitions have the form of rules with premisses and conclusion, typically written in the following form.
+\[
+\dfrac{\mathit{premisses}} 
+{\mathit{conclusion}} 
+~~~~\mathrm{if }~ \mathit{condition}
+\]
+With a suitable encoding of syntactic objects and program states as first-order terms, this is a first-order logic implication
+$\mathit{premisses} \wedge \mathit{condition} \rightarrow \mathit{conclusion}$ 
+(here $\rightarrow$ stands for logical implication).
+The conclusion is an atomic formula
+$\langle s, \sigma\rangle \Rightarrow \sigma'$ (big-step) or $\langle s, \sigma\rangle \rightarrow \langle s',\sigma'\rangle$ (small-step),
+where $\Rightarrow$ and $\rightarrow$ are first order predicates, so assuming that the premisses and conditions are conjunctions,
+the transition rules are Horn clauses.
+
+The close connection between transition rules and Horn clauses, and hence to the logic programming language Prolog, 
+was noticed by Kahn and his co-workers in their work on big-step semantics.
+A set of big-step transition rules written as Horn clauses can be executed as a logic program. This was exploited in
+the Typol tool \cite{Typol}. Similarly, small step transition rules, together with a rule specifying a run of
+small-step transitions, can also be regarded as a logic program.
+
+Interpreters for logic programs can themselves be written as logic programs, where the program being interpreted 
+is represented in some suitable way as a data structure in the interpreter.  
+
+We summarise our approach as follows.  Let $I(x,y)$ be a logic program implementing an interpreter for a set of
+big-step semantics rules $x$ and an object program $y$. $I$ is written in a small-step style (see next section).  Let logic program $B$ be the big-step semantics
+for some programming language, and let $\lceil B \rceil$ be the representation of $B$ in the interpreter.  Then we specialise 
+$I(\lceil B \rceil,y)$.  The resulting specialised interpreter $I_B(y)$ is a logic program containing (after some minor syntactic modification) 
+the small-step semantic rules
+corresponding to $B$.
+
+\section{A small-step interpreter for big-step semantics}
+
+\paragraph{Linear interpretation.}  Figure \ref{fig:linear-interp} shows the main clauses of a linear interpreter for any Horn clause program $P$.  
+The predicate \texttt{clause(Head,Body)} is used to access the clauses of $P$.  The predicate \texttt{solve(As)} has as argument a stack of atoms, and
+at each step the atom at the top of the stack \texttt{A}, is replaced by the (instance of the) body of a clause whose head unifies with \texttt{A}.
+We ignore for now the treatment of builtin predicates such as arithmetic.
+To run a goal \texttt{A} in $P$ we run \texttt{run([A])} in the interpreter.  
+Correctness of the interpreter follows from the soundness and completeness of linear resolution.
+\begin{figure}
+\begin{tabular}{l}
+\begin{lstlisting}
+solve([A|As]) :- 
+	clause(A,B),
+	solveConstraints(B,B1),
+	append(B1,As,As1),
+	solve(As1).
+solve([]).
+\end{lstlisting}
+\end{tabular}
+\caption{Clauses from a linear interpreter.}\label{fig:linear-interp}
+\end{figure}
+
+This interpreter could be specialised with respect to a given $P$.  This corresponds roughly to transforming $P$ to continuation-passing
+style, also known as binary logic programs \cite{Demoen}.
+
+\paragraph{Linear interpreter for big-step semantics.} 
+Our interpreter for big-step semantics follows a similar pattern; however, big-step semantics clauses have certain
+properties to be discussed in detail shortly, which we can exploit.  Secondly, instead of performing one resolution step on each cycle of the interpreter,
+as in Figure \ref{fig:linear-interp}, we wish to execute a number of resolution steps corresponding to whatever we define to be a ``small step" in the 
+program execution.  Writing this part of the interpreter is the crucial part of the whole method.
+
+\begin{figure}
+\begin{tabular}{l}
+\begin{lstlisting}
+solve([A|As]) :- 
+	smallStep(A,As,As1),
+	solve(As1).
+solve([]).
+\end{lstlisting}
+\end{tabular}
+\caption{Core of the linear big-step interpreter.}\label{fig:linear-bigstep}
+\end{figure}
+
+\
+\bibliographystyle{plain}
+%\bibliographystyle{splncs}
+\bibliography{refs}
+
+
+\end{document}
