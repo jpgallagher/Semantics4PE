@@ -277,17 +277,16 @@ corresponding to $B$.
 
 \paragraph{Linear interpretation.}  Figure \ref{fig:linear-interp} shows the main clauses of a linear interpreter for any Horn clause program $P$.  
 The predicate \texttt{clause(Head,Body)} is used to access the clauses of $P$.  The predicate \texttt{solve(As)} has as argument a stack of atoms, and
-at each step the atom at the top of the stack \texttt{A}, is replaced by the (instance of the) body of a clause whose head unifies with \texttt{A}.
-We ignore for now the treatment of builtin predicates such as arithmetic.
-To run a goal \texttt{A} in $P$ we run \texttt{run([A])} in the interpreter.  
+at each step the atom  \texttt{A} at the top of the stack is replaced by the (instance of the) body of a clause whose head unifies with \texttt{A}.
+(We ignore for now the treatment of builtin predicates such as arithmetic predicates).
+To run a goal \texttt{A} in $P$ we execute \texttt{run([A])} in the interpreter.  
 Correctness of the interpreter follows from the soundness and completeness of linear resolution.
 \begin{figure}
 \begin{tabular}{l}
 \begin{lstlisting}
 solve([A|As]) :- 
 	clause(A,B),
-	solveConstraints(B,B1),
-	append(B1,As,As1),
+	append(B,As,As1),
 	solve(As1).
 solve([]).
 \end{lstlisting}
@@ -295,15 +294,15 @@ solve([]).
 \caption{Clauses from a linear interpreter.}\label{fig:linear-interp}
 \end{figure}
 
-This interpreter could be specialised with respect to a given $P$.  This corresponds roughly to transforming $P$ to continuation-passing
+This interpreter could be specialised with respect to a given $P$.  The outcome corresponds roughly to transforming $P$ to continuation-passing
 style, also known as binary logic programs \cite{Demoen}.
 
 \paragraph{Linear interpreter for big-step semantics.} 
 Our interpreter for big-step semantics follows a similar pattern; however, big-step semantics clauses have certain
-properties to be discussed in detail shortly, which we can exploit.  Secondly, instead of performing one resolution step on each cycle of the interpreter,
+properties, which will be discussed in detail shortly, that we can exploit to avoid the need for an explicit stack.  
+Secondly, instead of performing one resolution step on each cycle of the interpreter,
 as in Figure \ref{fig:linear-interp}, we wish to execute a number of resolution steps corresponding to whatever we define to be a ``small step" in the 
-program execution.  Writing this part of the interpreter is the crucial part of the whole method.
-
+program execution.  
 \begin{figure}
 \begin{tabular}{l}
 \begin{lstlisting}
@@ -316,7 +315,83 @@ solve([]).
 \caption{Core of the linear big-step interpreter.}\label{fig:linear-bigstep}
 \end{figure}
 
-\
+The definition of the interpreter predicate \texttt{smallStep} is the crucial part of the whole interpreter.
+We now look more closely at the form of big-step transition rules, which will lead us to its definition. 
+Following \cite{Nielsons}, we take the general form of big-step rules to
+be as follows.
+\[
+\dfrac{\langle s_1, \sigma_1\rangle \Rightarrow \sigma'_1, \ldots, \langle s_n, \sigma_n\rangle \Rightarrow \sigma'_n}
+{\langle s, \sigma\rangle \Rightarrow \sigma'} 
+~~~~\mathrm{if }~ c
+\]
+This will be rendered as a Horn clause as follows.
+\begin{lstlisting}
+bigstep(S,St0,St01) :- C, 
+            bigstep(S1,St1,St11), ..., bigstep(Sn,Stn,Stn1),
+\end{lstlisting}
+If the premisses are empty ($n=0$) we call the rule an \emph{axiom}.  The syntax elements appearing as $s$ in the conclusion 
+are of the form $s=f(s'_1,\ldots,s'_k)$, where $s'_1,\ldots,s'_k$ are the immediate constituents of $s$.  Note that the immediate constituents 
+are not necessarily the same as the $s_1,\ldots,s_n$ in the premisses.  We assume that each syntax constructor $f$ appears in the conclusion
+of one or more rules, and that a constructor does not appear in the conclusion of both an axiom and non-axiom. Given a syntax term $s=f(t_1,\ldots,t_k)$,
+we call $s$ a \emph{leaf} if $f$ appears in the conclusion of one or more axiom, otherwise $s$ is called a \emph{non-leaf}.
+
+\paragraph{Definition of a small step.} We now proceed to make a first attempt to define \texttt{smallStep}.
+A small step, when executing the big-step semantics, is the application of one axiom.  
+The application of the non-axioms may be seen as reductions of the syntax
+term into its constituent terms (or other terms constructed from them), and hence does not actually \emph{do} anything computational.
+Our first definition of the \texttt{smallStep} relation is thus as follows. It repeatedly applies rules so long as the top of stack is a non-leaf; when 
+the top of stack is a leaf, it executes the condition of the axiom, represented by the call \texttt{run(Bs)}, and terminates.  
+Note that \texttt{smallStep}
+is a recursive predicate, and its execution may take many step, depending on how deep the syntax term is.
+
+\begin{figure}
+\begin{tabular}{l}
+\begin{lstlisting}
+smallStep(bigstep(A,St,St1),As,As) :- 
+	leaf(A),
+	clause(bigstep(A,St,St1), Bs),
+	run(Bs).
+smallStep(bigstep(A,St,St1),As,As1) :- 
+	nonLeaf(A),
+	clause(bigstep(A,St,St1), [B|Bs]),
+	append([B|Bs],As,[B|Bs1]),
+	smallStep(B,Bs1,As1).
+\end{lstlisting}
+\end{tabular}
+\caption{First definition of a small step.}\label{fig:linear-smallstep}
+\end{figure}
+
+Consider now the second clause for \texttt{smallStep}, handling a non-leaf.  We know that the clause to be applied has at least one
+call to \texttt{bigstep} in the body, since it is not an axiom. Hence we can consider the first such call (the variable \texttt{B} in the clause).
+If it is a leaf, \texttt{smallStep} will terminate on the next step, otherwise it is a non-leaf and \texttt{smallStep} will be called recursively.
+This information is needed in order to construct recursive small-step rules handling the non-leaf constructs. Adding this to the definition of
+\texttt{smallStep}, we get the following code.
+
+\begin{figure}
+\begin{tabular}{l}
+\begin{lstlisting}
+smallStep(bigstep(A,St,St1),As,As) :- 
+	leaf(A),
+	clause(bigstep(A,St,St1), Bs),
+	run(Bs).
+smallStep(bigstep(A,St,St1),As,As1) :- 
+	nonLeaf(A),
+	clause(bigstep(A,St,St1), [B|Bs]),
+	append([B|Bs],As,[B|Bs1]),
+	nextStep(B,Bs1,As1).
+	
+nextStep(A,As,As) :-
+	leaf(A),
+	smallStep(A,As,As).
+nextStep(A,As,[bigstep(A1,St2,St1)|As1]) :-
+	nonLeaf(bigstep(A,St0,St1)),
+	smallStep(bigstep(A,St0,St1),As,[bigstep(A1,St2,St1)|As1]).,
+\end{lstlisting}
+\end{tabular}
+\caption{First definition of a small step.}\label{fig:linear-smallstep}
+\end{figure}
+
+
 \bibliographystyle{plain}
 %\bibliographystyle{splncs}
 \bibliography{refs}
