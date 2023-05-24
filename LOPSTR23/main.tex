@@ -184,19 +184,20 @@ small-step transition rules,
 with minor syntactic modification. We describe experiments using an off-the shelf partial evaluator 
 for logic programs \cite{Logen}.
 
-In Section \ref{background} we review the notions of big-step and small-step operational semantics, and
+In Section \ref{background} we review the notions of big-step and small-step semantics, and
 the essential concepts behind program transformation using interpreter specialisation, with focus on interpreters for
-Horn clause programs.
+Horn clause programs. Section \ref{small-step-interp} describes our interpreter for big-step semantic rules,
+written in a linear style. Section \ref{examples} shows the results of experiments in specialising the interpreter.
 
-\section{Background}
+\section{Background}\label{background}
 
 \subsection{Operational Semantics}
 The operational semantics of a program is usually defined in one of two styles, 
 which are called \emph{natural semantics} and \emph{structural operational semantics}~\cite{NielsonN1992}.
 Natural semantics (NS) was explicitly proposed by Kahn in the 
 1980s \cite{Kahn87}; the name indicates an analogy with natural deduction. 
-Structural operational semantics (SOS) was formulated by Plotkin \cite{Plotkin1981,Plotkin04a}, 
-who later wrote an account of the origins of SOS \cite{Plotkin04}.  The motivation of SOS was to define
+Structural operational semantics (SOS) was formulated by Plotkin \cite{Plotkin1981,Plotkin04,Plotkin04a}.  
+The motivation of SOS was to define
 ``machine-like" execution of programs, but in a syntax-directed style, omitting all unnecessary details of
 the machine.  Both styles have their advantages, which we do not discuss in detail here.
 
@@ -205,7 +206,7 @@ since at least the early 1990s, and we use them in the rest of the paper, since 
 express the difference between NS and SOS.  Both approaches define the behaviour of a program
 as runs in a transition system, whose configurations are of the form $\langle s, \sigma\rangle$ where $s$ is a
 syntactic expression (such as a statement) and $\sigma$ is a program state; sometimes $s$ is omitted when it is empty
-or a halt statement.  
+or associated with a final state.  
 
 In big-step semantics, transitions are of the form $\langle s, \sigma\rangle \Rightarrow \sigma'$, 
 which means that $s$ is completely executed in state $\sigma$, terminating in final state $\sigma'$.
@@ -243,18 +244,18 @@ further research \cite{GallagherGlueck}.
 
 \subsection{Horn clause representation of semantics and interpreters}
 
-Both big-step and small-step transitions have the form of rules with premisses and conclusion, typically written in the following form.
+Both big-step and small-step transitions have the form of rules with premises and conclusion, typically written in the following form.
 \[
-\dfrac{\mathit{premisses}} 
+\dfrac{\mathit{premises}} 
 {\mathit{conclusion}} 
 ~~~~\mathrm{if }~ \mathit{condition}
 \]
 With a suitable encoding of syntactic objects and program states as first-order terms, this is a first-order logic implication
-$\mathit{premisses} \wedge \mathit{condition} \rightarrow \mathit{conclusion}$ 
+$\mathit{premises} \wedge \mathit{condition} \rightarrow \mathit{conclusion}$ 
 (here $\rightarrow$ stands for logical implication).
 The conclusion is an atomic formula
 $\langle s, \sigma\rangle \Rightarrow \sigma'$ (big-step) or $\langle s, \sigma\rangle \rightarrow \langle s',\sigma'\rangle$ (small-step),
-where $\Rightarrow$ and $\rightarrow$ are first order predicates, so assuming that the premisses and conditions are conjunctions,
+where $\Rightarrow$ and $\rightarrow$ are first order predicates, so assuming that the premises and conditions are conjunctions,
 the transition rules are Horn clauses.
 
 The close connection between transition rules and Horn clauses, and hence to the logic programming language Prolog, 
@@ -273,7 +274,7 @@ $I(\lceil B \rceil,y)$.  The resulting specialised interpreter $I_B(y)$ is a log
 the small-step semantic rules
 corresponding to $B$.
 
-\section{A small-step interpreter for big-step semantics}
+\section{A small-step interpreter for big-step semantics}\label{small-step-interp}
 
 \paragraph{Linear interpretation.}  Figure \ref{fig:linear-interp} shows the main clauses of a linear interpreter for any Horn clause program $P$.  
 The predicate \texttt{clause(Head,Body)} is used to access the clauses of $P$.  The predicate \texttt{solve(As)} has as argument a stack of atoms, and
@@ -285,9 +286,9 @@ Correctness of the interpreter follows from the soundness and completeness of li
 \begin{tabular}{l}
 \begin{lstlisting}
 solve([A|As]) :- 
-	clause(A,B),
-	append(B,As,As1),
-	solve(As1).
+    clause(A,B),
+    append(B,As,As1),
+    solve(As1).
 solve([]).
 \end{lstlisting}
 \end{tabular}
@@ -298,17 +299,16 @@ This interpreter could be specialised with respect to a given $P$.  The outcome 
 style, also known as binary logic programs \cite{Demoen}.
 
 \paragraph{Linear interpreter for big-step semantics.} 
-Our interpreter for big-step semantics follows a similar pattern; however, big-step semantics clauses have certain
-properties, which will be discussed in detail shortly, that we can exploit to avoid the need for an explicit stack.  
-Secondly, instead of performing one resolution step on each cycle of the interpreter,
+Our interpreter for big-step semantics is a linear interpreter of big-step semantics; however,  
+instead of performing just one resolution step on each cycle of the interpreter,
 as in Figure \ref{fig:linear-interp}, we wish to execute a number of resolution steps corresponding to whatever we define to be a ``small step" in the 
-program execution.  
+program execution.  The main interpreter loop thus has the form shown in Figure \ref{fig:linear-bigstep}.
 \begin{figure}
 \begin{tabular}{l}
 \begin{lstlisting}
 solve([A|As]) :- 
-	smallStep(A,As,As1),
-	solve(As1).
+    smallStep(A,As,As1),
+    solve(As1).
 solve([]).
 \end{lstlisting}
 \end{tabular}
@@ -327,15 +327,15 @@ be as follows.
 This will be rendered as a Horn clause as follows.
 \begin{lstlisting}
 bigstep(S,St0,St01) :- C, 
-            bigstep(S1,St1,St11), ..., bigstep(Sn,Stn,Stn1),
+            bigstep(S1,St1,St11), ..., bigstep(Sn,Stn,Stn1).
 \end{lstlisting}
-If the premisses are empty ($n=0$) we call the rule an \emph{axiom}.  The syntax elements appearing as $s$ in the conclusion 
+If the premises are empty ($n=0$) we call the rule an \emph{axiom}.  The syntax elements appearing as $s$ in the conclusion 
 are of the form $s=f(s'_1,\ldots,s'_k)$, where $s'_1,\ldots,s'_k$ are the immediate constituents of $s$.  Note that the immediate constituents 
-are not necessarily the same as the $s_1,\ldots,s_n$ in the premisses.  We assume that each syntax constructor $f$ appears in the conclusion
+are not necessarily the same as the $s_1,\ldots,s_n$ in the premises.  We assume that each syntax constructor $f$ appears in the conclusion
 of one or more rules, and that a constructor does not appear in the conclusion of both an axiom and non-axiom. Given a syntax term $s=f(t_1,\ldots,t_k)$,
 we call $s$ a \emph{leaf} if $f$ appears in the conclusion of one or more axiom, otherwise $s$ is called a \emph{non-leaf}.
 
-\paragraph{Definition of a small step.} We now proceed to make a first attempt to define \texttt{smallStep}.
+\paragraph{Definition of a small step.} We now proceed to make a first attempt to define \texttt{smallStep}, shown in Figure \ref{fig:linear-smallstep}.
 A small step, when executing the big-step semantics, is the application of one axiom.  
 The application of the non-axioms may be seen as reductions of the syntax
 term into its constituent terms (or other terms constructed from them), and hence does not actually \emph{do} anything computational.
@@ -348,14 +348,14 @@ is a recursive predicate, and its execution may take many step, depending on how
 \begin{tabular}{l}
 \begin{lstlisting}
 smallStep(bigstep(A,St,St1),As,As) :- 
-	leaf(A),
-	clause(bigstep(A,St,St1), Bs),
-	run(Bs).
+    leaf(A),
+    clause(bigstep(A,St,St1), Bs),
+    run(Bs).
 smallStep(bigstep(A,St,St1),As,As1) :- 
-	nonLeaf(A),
-	clause(bigstep(A,St,St1), [B|Bs]),
-	append([B|Bs],As,[B|Bs1]),
-	smallStep(B,Bs1,As1).
+    nonLeaf(A),
+    clause(bigstep(A,St,St1), [B|Bs]),
+    append([B|Bs],As,[B|Bs1]),
+    smallStep(B,Bs1,As1).
 \end{lstlisting}
 \end{tabular}
 \caption{First definition of a small step.}\label{fig:linear-smallstep}
@@ -365,33 +365,47 @@ Consider now the second clause for \texttt{smallStep}, handling a non-leaf.  We 
 call to \texttt{bigstep} in the body, since it is not an axiom. Hence we can consider the first such call (the variable \texttt{B} in the clause).
 If it is a leaf, \texttt{smallStep} will terminate on the next step, otherwise it is a non-leaf and \texttt{smallStep} will be called recursively.
 This information is needed in order to construct recursive small-step rules handling the non-leaf constructs. Adding this to the definition of
-\texttt{smallStep}, we get the following code.
+\texttt{smallStep}, we get the code shown in Figure \ref{fig:linear-nextstep}.
 
 \begin{figure}
 \begin{tabular}{l}
 \begin{lstlisting}
 smallStep(bigstep(A,St,St1),As,As) :- 
-	leaf(A),
-	clause(bigstep(A,St,St1), Bs),
-	run(Bs).
+    leaf(A),
+    clause(bigstep(A,St,St1), Bs),
+    run(Bs).
 smallStep(bigstep(A,St,St1),As,As1) :- 
-	nonLeaf(A),
-	clause(bigstep(A,St,St1), [B|Bs]),
-	append([B|Bs],As,[B|Bs1]),
-	nextStep(B,Bs1,As1).
-	
+    nonLeaf(A),
+    clause(bigstep(A,St,St1), [B|Bs]),
+    append([B|Bs],As,[B|Bs1]),
+    nextStep(B,Bs1,As1).
+    
 nextStep(A,As,As) :-
-	leaf(A),
-	smallStep(A,As,As).
+    leaf(A),
+    smallStep(A,As,As).
 nextStep(A,As,[bigstep(A1,St2,St1)|As1]) :-
-	nonLeaf(bigstep(A,St0,St1)),
-	smallStep(bigstep(A,St0,St1),As,[bigstep(A1,St2,St1)|As1]).,
+    nonLeaf(bigstep(A,St0,St1)),
+    smallStep(bigstep(A,St0,St1),As,[bigstep(A1,St2,St1)|As1]).
 \end{lstlisting}
 \end{tabular}
-\caption{First definition of a small step.}\label{fig:linear-smallstep}
+\caption{First definition of a small step.}\label{fig:linear-nextstep}
 \end{figure}
 
+\paragraph{Folding to eliminate the stack.}  So far, the interpreter still handles a stack; yet small-step semantics (at least in its standard form)
+contains no stack.  We now show how to eliminate the stack from the interpreter;  more precisely, we show how to apply folding so that it
+contains at most one atomic call to \texttt{bigstep}.
 
+Consider again the general form of a big-step rule with $n$ premises, where $n>0$ (a non-axiom).  For the moment,
+assume that $n\le 2$.  We consider the general case later. We show the constructor $f$ in
+the conclusion.  
+\[
+\dfrac{\langle s_1, \sigma_1\rangle \Rightarrow \sigma'_1, \ldots, \langle s_n, \sigma_n\rangle \Rightarrow \sigma'_n}
+{\langle f(s'_1,\ldots,s'_k), \sigma\rangle \Rightarrow \sigma'} 
+~~~~\mathrm{if }~ c
+\]
+
+
+\section{Examples}\label{examples}
 \bibliographystyle{plain}
 %\bibliographystyle{splncs}
 \bibliography{refs}
