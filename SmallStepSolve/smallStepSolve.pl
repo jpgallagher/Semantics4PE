@@ -18,10 +18,10 @@ smallStep(bigstep(A,St0,St1),As1) :-
 nextStep(A,_,Bs,Bs) :-
 	leaf(A),
 	smallStep(A,[]).
-nextStep(bigstep(A,St0,St1),K,Bs,[H]) :-
+nextStep(bigstep(A,St0,St1),K,Bs,[bigstep(U,V,W)]) :-
 	nonLeaf(bigstep(A,St0,St1)),
-	smallStep(bigstep(A,St0,St1),[B1]),
-	tryFold(K,H,[B1|Bs]).
+	smallStep(bigstep(A,St0,St1),[bigstep(U,V,W)]),
+	tryFold(K,H,[bigstep(U,V,W)|Bs]).
 	
 tryFold(_,B1,[B1]).
 tryFold(K,H,[B1|Bs]) :-
@@ -33,19 +33,19 @@ evalConditions([B|Bs],[B|Bs]) :-
 	bigStepPred(B).
 evalConditions([B|Bs],Bs1) :-
 	otherPred(B),
-	callPred(B),
+	eval(B),
 	evalConditions(Bs,Bs1).
 
-callPred(B) :-
+eval(B) :-
 	constraint(B),
 	call(B).
-callPred(B) :-
+eval(B) :-
 	clpClause(_,B,B1),
 	callPreds(B1).
 	
 callPreds([]).
 callPreds([B|Bs]) :-
-	callPred(B),
+	eval(B),
 	callPreds(Bs).
 	
 bigStepPred(bigstep(_,_,_)).

@@ -17,8 +17,8 @@ logen(nextStep/4,nextStep(A,_,B,B)) :-
     logen(memo,smallStep(A,[])).
 logen(nextStep/4,nextStep(bigstep(C,D,E),A,B,[F])) :-
     logen(memo,nonLeaf(bigstep(C,D,E))),
-    logen(memo,smallStep(bigstep(C,D,E),[G])),
-    logen(unfold,tryFold(A,F,[G|B])).
+    logen(memo,smallStep(bigstep(C,D,E),[bigstep(U,V,W)])),
+    logen(unfold,tryFold(A,F,[bigstep(U,V,W)|B])).
 logen(tryFold/3,tryFold(_,A,[A])).
 logen(tryFold/3,tryFold(A,B,[C|D])) :-
     logen(call,D\==[]),
@@ -28,17 +28,17 @@ logen(evalConditions/2,evalConditions([A|B],[A|B])) :-
     logen(unfold,bigStepPred(A)).
 logen(evalConditions/2,evalConditions([B|C],A)) :-
     logen(unfold,otherPred(B)),
-    logen(memo,callPred(B)),
+    logen(memo,eval(B)),
     logen(unfold,evalConditions(C,A)).
-logen(callPred/1,callPred(A)) :-
+logen(callPred/1,eval(A)) :-
     logen(unfold,constraint(A)),
     logen(rescall,call(A)).
-logen(callPred/1,callPred(A)) :-
+logen(callPred/1,eval(A)) :-
     logen(unfold,clpClause(_,A,B)),
     logen(unfold,callPreds(B)).
 logen(callPreds/1,callPreds([])).
 logen(callPreds/1,callPreds([A|B])) :-
-    logen(memo,callPred(A)),
+    logen(memo,eval(A)),
     logen(unfold,callPreds(B)).
 logen(bigStepPred/1,bigStepPred(bigstep(_,_,_))).
 logen(bigStepPred/1,bigStepPred(controlExpr(_,_,_,_))).
@@ -111,8 +111,8 @@ logen(exCode/1,exCode(while(var(x)>cns(nat(0)),asg(var(x),sub(var(x),cns(nat(1))
 :- filter
     smallStep(nonvar,dynamic).
 :- filter
-    callPred(nonvar).
+    eval(nonvar).
 :- filter
-    leaf(nonvar).
+    leaf(dynamic).
 :- filter
-    nonLeaf(nonvar).
+    nonLeaf(dynamic).
