@@ -100,6 +100,7 @@
 \newcommand{\ASG}[2]{#1 := #2}
 \newcommand{\SEQ}[2]{#1\,{;}\,#2}
 \newcommand{\IFNZ}[3]{\keyword{if} \,(#1)\, #2\,\keyword{else}\,#3}
+\newcommand{\FOR}[4]{\keyword{for} \,(#1\,#2\,#3)\, #4}
 \newcommand{\WHILE}[2]{\keyword{while} \,(#1)\, #2}
 
 
@@ -111,7 +112,7 @@
   %
   stringstyle=\ttfamily,
   showstringspaces = false,
-  basicstyle=\linespread{0.9}\small\ttfamily,
+  basicstyle=\linespread{0.9}\footnotesize\ttfamily,
   commentstyle=\small\emph,
   keywordstyle=\small\bfseries,
   %
@@ -123,7 +124,7 @@
   breaklines=true,
   language=C,
   xleftmargin=1em,
-  morekeywords={if,then,else,do,return,length,let,seq,asg,function,call,ret,ifthenelse,block},
+  morekeywords={if,then,else,do,return,length,let,seq,asg,function,call,ret,ifthenelse,block,skip},
   deletekeywords={static,struct,call},
   columns=[l]flexible
 }
@@ -192,11 +193,9 @@ written in a linear style. Section \ref{examples} shows the results of experimen
 \section{Background}\label{background}
 
 \subsection{Operational Semantics}
-The operational semantics of a program is usually defined in one of two styles, 
-which are called \emph{natural semantics} and \emph{structural operational semantics}~\cite{NielsonN1992}.
 Natural semantics (NS) was explicitly proposed by Kahn in the 
 1980s \cite{Kahn87}; the name indicates an analogy with natural deduction. 
-Structural operational semantics (SOS) was formulated by Plotkin \cite{Plotkin1981,Plotkin04,Plotkin04a}.  
+Structural operational semantics (SOS) was developed by Plotkin \cite{Plotkin1981,Plotkin04,Plotkin04a}.  
 The motivation of SOS was to define
 ``machine-like" execution of programs, but in a syntax-directed style, omitting all unnecessary details of
 the machine.  Both styles have their advantages, which we do not discuss in detail here.
@@ -208,16 +207,16 @@ as runs in a transition system, whose configurations are of the form $\langle s,
 syntactic expression (such as a statement) and $\sigma$ is a program state; sometimes $s$ is omitted when it is empty
 or associated with a final state.  
 
-In big-step semantics, transitions are of the form $\langle s, \sigma\rangle \Rightarrow \sigma'$, 
+In big-step semantics, transitions are of the form $\langle s, \sigma\rangle \Longrightarrow \sigma'$, 
 which means that $s$ is completely executed in state $\sigma$, terminating in final state $\sigma'$.
 The name \emph{big-step} semantics arises since the transition for a statement goes from the initial to the final state.  
 %
-By contrast, in small-step semantics, a transition has the form $\langle s, \sigma\rangle \rightarrow \langle s',\sigma'\rangle$, 
+By contrast, in small-step semantics, a transition has the form $\langle s, \sigma\rangle \Rightarrow \langle s',\sigma'\rangle$, 
 which defines a single step
 that moves from $s$ in state $\sigma$ to the \emph{next} statement $s'$ and next state $\sigma'$. We may also have a transition
-$\langle s, \sigma\rangle \rightarrow \sigma'$ for the case that $s$ terminates in one step.
+$\langle s, \sigma\rangle \Rightarrow \sigma'$ for the case that $s$ terminates in one step.
 A computation or run is defined as a 
-chain of small steps.  Note that we use $\Rightarrow$ and $\rightarrow$ for big and small-step transitions respectively.
+chain of small steps.  Note that we use $\Longrightarrow$ and $\Rightarrow$ for big and small-step transitions respectively.
 
 \subsection{Interpreter specialisation}
 
@@ -252,10 +251,9 @@ Both big-step and small-step transitions have the form of rules with premises an
 \]
 With a suitable encoding of syntactic objects and program states as first-order terms, this is a first-order logic implication
 $\mathit{premises} \wedge \mathit{condition} \rightarrow \mathit{conclusion}$ 
-(here $\rightarrow$ stands for logical implication).
 The conclusion is an atomic formula
-$\langle s, \sigma\rangle \Rightarrow \sigma'$ (big-step) or $\langle s, \sigma\rangle \rightarrow \langle s',\sigma'\rangle$ (small-step),
-where $\Rightarrow$ and $\rightarrow$ are first order predicates, so assuming that the premises and conditions are conjunctions,
+$\langle s, \sigma\rangle \Longrightarrow \sigma'$ (big-step) or $\langle s, \sigma\rangle \Rightarrow \langle s',\sigma'\rangle$ (small-step),
+where $\Longrightarrow$ and $\Rightarrow$ are first order predicates, so assuming that the premises and conditions are conjunctions,
 the transition rules are Horn clauses.
 
 The close connection between transition rules and Horn clauses, and hence to the logic programming language Prolog, 
@@ -274,6 +272,8 @@ $I(\lceil B \rceil,y)$.  The resulting specialised interpreter $I_B(y)$ is a log
 the small-step semantic rules
 corresponding to $B$.
 
+In the following, we use Prolog syntax and teletype font for Horn clauses.
+
 \section{A small-step interpreter for big-step semantics}\label{small-step-interp}
 
 \paragraph{Linear interpretation.}  Figure \ref{fig:linear-interp} shows the main clauses of a linear interpreter for any Horn clause program $P$.  
@@ -285,10 +285,7 @@ Correctness of the interpreter follows from the soundness and completeness of li
 \begin{figure}
 \begin{tabular}{l}
 \begin{lstlisting}
-solve([A|As]) :- 
-    clause(A,B),
-    append(B,As,As1),
-    solve(As1).
+solve([A|As]) :-  clause(A,B), append(B,As,As1), solve(As1).
 solve([]).
 \end{lstlisting}
 \end{tabular}
@@ -306,9 +303,7 @@ program execution.  The main interpreter loop thus has the form shown in Figure 
 \begin{figure}
 \begin{tabular}{l}
 \begin{lstlisting}
-solve([A|As]) :- 
-    smallStep(A,As,As1),
-    solve(As1).
+solve([A|As]) :- smallStep(A,As,As1), solve(As1).
 solve([]).
 \end{lstlisting}
 \end{tabular}
@@ -320,14 +315,13 @@ We now look more closely at the form of big-step transition rules, which will le
 Following \cite{Nielsons}, we take the general form of big-step rules to
 be as follows.
 \[
-\dfrac{\langle s_1, \sigma_1\rangle \Rightarrow \sigma'_1, \ldots, \langle s_n, \sigma_n\rangle \Rightarrow \sigma'_n}
-{\langle s, \sigma\rangle \Rightarrow \sigma'} 
+\dfrac{\langle s_1, \sigma_1\rangle \Longrightarrow \sigma'_1, \ldots, \langle s_n, \sigma_n\rangle \Longrightarrow \sigma'_n}
+{\langle s, \sigma\rangle \Longrightarrow \sigma'} 
 ~~~~\mathrm{if }~ c
 \]
 This will be rendered as a Horn clause as follows.
 \begin{lstlisting}
-bigstep(S,St0,St01) :- C, 
-            bigstep(S1,St1,St11), ..., bigstep(Sn,Stn,Stn1).
+bigstep(S,M0,M01):-C,bigstep(S1,M1,M11),...,bigstep(Sn,Mn,Mn1)
 \end{lstlisting}
 If the premises are empty ($n=0$) we call the rule an \emph{axiom}.  The syntax elements appearing as $s$ in the conclusion 
 are of the form $s=f(s'_1,\ldots,s'_k)$, where $s'_1,\ldots,s'_k$ are the immediate constituents of $s$.  Note that the immediate constituents 
@@ -335,12 +329,13 @@ are not necessarily the same as the $s_1,\ldots,s_n$ in the premises.  We assume
 of one or more rules, and that a constructor does not appear in the conclusion of both an axiom and non-axiom. Given a syntax term $s=f(t_1,\ldots,t_k)$,
 we call $s$ a \emph{leaf} if $f$ appears in the conclusion of one or more axiom, otherwise $s$ is called a \emph{non-leaf}.
 
-\paragraph{Definition of a small step.} We now proceed to make a first attempt to define \texttt{smallStep}, shown in Figure \ref{fig:linear-smallstep}.
+\paragraph{Definition of a small step.} We now proceed to define \texttt{smallStep} in stages, to motivate its construction.
+The first version is shown in Figure \ref{fig:linear-smallstep}.
 A small step, when executing the big-step semantics, is the application of one axiom.  
 The application of the non-axioms may be seen as reductions of the syntax
 term into its constituent terms (or other terms constructed from them), and hence does not actually \emph{do} anything computational.
 Our first definition of the \texttt{smallStep} relation is thus as follows. It repeatedly applies rules so long as the top of stack is a non-leaf; when 
-the top of stack is a leaf, it executes the condition of the axiom, represented by the call \texttt{run(Bs)}, and terminates.  
+the top of stack is a leaf, it executes the condition of the axiom, represented by the call \texttt{eval(Bs)}, and terminates.  
 Note that \texttt{smallStep}
 is a recursive predicate, and its execution may take many step, depending on how deep the syntax term is.
 
@@ -350,7 +345,7 @@ is a recursive predicate, and its execution may take many step, depending on how
 smallStep(bigstep(A,St,St1),As,As) :- 
     leaf(A),
     clause(bigstep(A,St,St1), Bs),
-    run(Bs).
+    eval(Bs).
 smallStep(bigstep(A,St,St1),As,As1) :- 
     nonLeaf(A),
     clause(bigstep(A,St,St1), [B|Bs]),
@@ -373,7 +368,7 @@ This information is needed in order to construct recursive small-step rules hand
 smallStep(bigstep(A,St,St1),As,As) :- 
     leaf(A),
     clause(bigstep(A,St,St1), Bs),
-    run(Bs).
+    eval(Bs).
 smallStep(bigstep(A,St,St1),As,As1) :- 
     nonLeaf(A),
     clause(bigstep(A,St,St1), [B|Bs]),
@@ -383,29 +378,204 @@ smallStep(bigstep(A,St,St1),As,As1) :-
 nextStep(A,As,As) :-
     leaf(A),
     smallStep(A,As,As).
-nextStep(A,As,[bigstep(A1,St2,St1)|As1]) :-
+nextStep(A,As,As1) :-
     nonLeaf(bigstep(A,St0,St1)),
-    smallStep(bigstep(A,St0,St1),As,[bigstep(A1,St2,St1)|As1]).
+    smallStep(bigstep(A,St0,St1),As,As1).
 \end{lstlisting}
 \end{tabular}
-\caption{First definition of a small step.}\label{fig:linear-nextstep}
+\caption{Enhanced small step definition, with next step lookahead.}\label{fig:linear-nextstep}
 \end{figure}
 
 \paragraph{Folding to eliminate the stack.}  So far, the interpreter still handles a stack; yet small-step semantics (at least in its standard form)
 contains no stack.  We now show how to eliminate the stack from the interpreter;  more precisely, we show how to apply folding so that it
-contains at most one atomic call to \texttt{bigstep}.
+contains at most one call to \texttt{bigstep}.
 
 Consider again the general form of a big-step rule with $n$ premises, where $n>0$ (a non-axiom).  For the moment,
-assume that $n\le 2$.  We consider the general case later. We show the constructor $f$ in
+assume that $n\le 2$.  We discuss the general case later. The constructor $f$ is shown in
 the conclusion.  
 \[
-\dfrac{\langle s_1, \sigma_1\rangle \Rightarrow \sigma'_1, \ldots, \langle s_n, \sigma_n\rangle \Rightarrow \sigma'_n}
-{\langle f(s'_1,\ldots,s'_k), \sigma\rangle \Rightarrow \sigma'} 
+\dfrac{\langle s_1, \sigma_1\rangle \Longrightarrow \sigma'_1 ~~~\langle s_2, \sigma_2\rangle \Longrightarrow \sigma'_2}
+{\langle f(s'_1,\ldots,s'_k), \sigma\rangle \Longrightarrow \sigma'} 
 ~~~~\mathrm{if }~ c
 \]
 
+\begin{figure}
+\begin{tabular}{l}
+\begin{lstlisting}
+smallStep(A,[]) :-
+	leaf(A),
+	clause(_,A,Bs),
+	eval(Bs).
+smallStep(bigstep(A,St0,St1),As1) :-
+	nonLeaf(bigstep(A,St0,St1)),
+	clause(K,bigstep(A,St0,St1),[B|Bs]),
+	nextStep(B,K,Bs,As1).
+	
+nextStep(A,_,Bs,Bs) :-
+	leaf(A),
+	smallStep(A,[]).
+nextStep(bigstep(A,St0,St1),K,Bs,[bigstep(U,V,W)]) :-
+	nonLeaf(bigstep(A,St0,St1)),
+	smallStep(bigstep(A,St0,St1),[bigstep(U,V,W)]),
+	tryFold(K,H,[bigstep(U,V,W)|Bs]).
+	
+tryFold(_,B1,[B1]).
+tryFold(K,H,[B1|Bs]) :-
+	Bs \== [],
+	clause(K,H,[B1|Bs]).
+\end{lstlisting}
+\end{tabular}
+\caption{Definition of a small step, with folding of the stack.}\label{fig:linear-fold}
+\end{figure}
+
+Small step evaluation of such a rule consists of treating the arguments from left to right, applying small steps to the first premise until it
+is completed, then moving to the second. For example, consider the imperative statement sequence $s_1;s_2$. Execution of the
+first premise may take several small steps: $\langle s_1, \sigma_1\rangle, \langle s_{1,1}, \sigma_{1,1}\rangle, \langle s_{1,2}, \sigma_{1,2}\rangle, \ldots \sigma_1$.
+Execution then moves to $\langle s_2, \sigma_1\rangle$.  
+In small step execution, the context of the execution of the first component it
+maintained by substituting the partial results in the syntactic functor in the conclusion. Thus the small-step execution of $s_1;s_2$ follows the sequence
+$$\langle s_1;s_2, \sigma_1\rangle, \langle s_{1,1};s_2, \sigma_{1,1}\rangle, \langle s_{1,2};s_2, \sigma_{1,2}\rangle, \ldots \langle s_2,\sigma_1\rangle,\ldots$$
+
+The construction of the context of the rule conclusion is achieved in the interpreter by trying to fold the current stack of goals using the 
+clause that was used to produce it. Either the stack contains only one goal, in which case no folding is needed, or
+the height of the stack just before folding is two and so has the form required to fold with the rule clause.
+Adding the folding operation gives the code for \texttt{smallStep} shown in Figure \ref{fig:linear-fold}. 
+Note that the second argument of \texttt{smallStep} in the previous figures is always \texttt{[]} (since the height of the stack is at most one), we
+omit that argument, leaving \texttt{smallStep} with only two arguments.
+
+\begin{figure}
+\[
+\begin{array}{l|l}
+ \dfrac{ } 
+{\langle \ASG{x}{e}, \sigma \rangle \Longrightarrow \sigma[x/v]}
+ ~~~\text{if } V e \sigma = v~
+
+
+&~~~
+\dfrac{\langle s_1, \sigma \rangle \Longrightarrow \sigma' } 
+{\langle \IFNZ{b}{s_1}{s_2}, \sigma \rangle \Longrightarrow \sigma'}
+ ~~~~~~~\text{if } V b \sigma = \true\\
+ \\
+\dfrac{\langle s_1, \sigma \rangle \Longrightarrow \sigma' ~~~~\langle s_2, \sigma' \rangle \Longrightarrow \sigma''} 
+{\langle \SEQ{s_1}{s_2}, \sigma \rangle \Longrightarrow \sigma''}~~~
+&~~~
+\dfrac{\langle s_2, \sigma \rangle \Longrightarrow \sigma' } 
+{\langle \IFNZ{b}{s_1}{s_2}, \sigma \rangle \Longrightarrow \sigma'}
+ ~~~~~~~\text{if } V b \sigma = \false\\
+ \\
+ 
+ ~
+&~~~
+\dfrac{\langle \IFNZ{b}{s;\WHILE{b}{s}}{\SKIP}, \sigma \rangle \Longrightarrow \sigma'} 
+{\langle \WHILE{b}{s}, \sigma \rangle \Longrightarrow \sigma'}
+\\
+\\
+\dfrac{} 
+{\langle \SKIP, \sigma \rangle \Longrightarrow \sigma}
+ ~
+&
+\dfrac{\langle \mathit{init}, \sigma \rangle \Longrightarrow \sigma' ~~~~\langle \WHILE{b}{\SEQ{s}{\mathit{incr}}}, \sigma' \rangle \Longrightarrow \sigma''} 
+{\langle \FOR{\mathit{init}}{b}{\mathit{incr}}{s}, \sigma \rangle \Longrightarrow \sigma''}
+\\
+ \end{array}
+\]
+\caption{Big-step rules for a small imperative language.}\label{big-step-trans}
+\end{figure}
 
 \section{Examples}\label{examples}
+
+
+
+
+Figure \ref{big-step-trans} shows the big-step semantics for a small imperative language containing assignments , statement composition,
+if-then-else, while and for statements.  We assume a function $V$ that evaluates expressions and conditionals in a state.  
+Specialising our small-step interpreter with respect for these rules gives the output shown in Figure \ref{small-step-while}. While a few of the
+arguments are redundant, the small-step rules shown in Figure \ref{small-step-rules} can be directly extracted.  The first clause for \texttt{while}
+(the 7th clause for \texttt{smallStep}) contains the body goal \texttt{leaf5(bigstep(ifthenelse(...))} which fails and so that clause can be eliminated.
+In general, the control of the partial evaluator {\sc  Logen}  is a balance between unfolding too much and unfolding too little, so such cases are 
+difficult to eliminate.
+\begin{figure}
+\begin{tabular}{l}
+\begin{lstlisting}
+smallStep1(skip,A,A,[]).
+smallStep1(asg(var(D),C),A,B,[]) :-
+    eval3(C,A,E,F),
+    eval4(D,F,E,B).
+smallStep1(seq(C,D),A,B,[bigstep(D,E,B)]) :-
+    leaf5(bigstep(C,A,E)),
+    smallStep1(C,A,E,[]).
+smallStep1(seq(C,D),A,B,[bigstep(seq(F,D),E,B)]) :-
+    nonLeaf6(bigstep(C,A,G)),
+    smallStep1(C,A,G,[bigstep(F,E,G)]).
+smallStep1(ifthenelse(C,D,_),A,B,[bigstep(D,E,B)]) :-
+    leaf5(controlExpr(C,A,E,1)),
+    smallStep2(C,A,E,1,[]).
+smallStep1(ifthenelse(C,_,D),A,B,[bigstep(D,E,B)]) :-
+    leaf5(controlExpr(C,A,E,0)),
+    smallStep2(C,A,E,0,[]).
+smallStep1(while(C,D),A,B,[]) :-
+    leaf5(bigstep(ifthenelse(C,seq(D,while(C,D)),skip),A,B)),
+    smallStep1(ifthenelse(C,seq(D,while(C,D)),skip),A,B,[]).
+smallStep1(while(C,D),A,B,[bigstep(E,F,G)]) :-
+    nonLeaf6(bigstep(ifthenelse(C,seq(D,while(C,D)),skip),A,B)),
+    smallStep1(ifthenelse(C,seq(D,while(C,D)),skip),A,B,[bigstep(E,F,G)]).
+smallStep1(for(C,D,E,F),A,B,[bigstep(while(D,seq(F,E)),G,B)]) :-
+    leaf5(bigstep(C,A,G)),
+    smallStep1(C,A,G,[]).
+smallStep1(for(C,D,E,F),A,B,[bigstep(for(H,D,E,F),G,B)]) :-
+    nonLeaf6(bigstep(C,A,I)),
+    smallStep1(C,A,I,[bigstep(H,G,I)]).
+
+\end{lstlisting}
+\end{tabular}
+\caption{Small step clauses for statements, in the specialised interpreter.}\label{small-step-while}
+\end{figure}
+
+\begin{figure}
+\[
+\begin{array}{l|l}
+ \dfrac{ } 
+{\langle \ASG{x}{e}, \sigma \rangle \Rightarrow \sigma[x/v]}
+ ~~~~~~~\text{if } V e \sigma = v~~~
+
+&~~~
+\dfrac{} 
+{\langle \SKIP, \sigma \rangle \Rightarrow \sigma}
+\\
+\\
+\dfrac{\langle s_1, \sigma \rangle \Rightarrow \sigma' } 
+{\langle \SEQ{s_1}{s_2}, \sigma \rangle \Rightarrow \langle s_2 \sigma'\rangle}~~~
+&~~~
+\dfrac{} 
+{\langle \IFNZ{b}{s_1}{s_2}, \sigma \rangle \Rightarrow \langle s_1,\sigma'\rangle}
+ ~~~~~~~\text{if } V b \sigma = \true\\
+ \\
+ \dfrac{\langle s_1, \sigma \rangle \Rightarrow \langle s_1', \sigma'\rangle} 
+{\langle \SEQ{s_1}{s_2}, \sigma \rangle \Rightarrow \langle \SEQ{s_1'}{s_2}, \sigma'\rangle}~~~
+ ~
+&~~~
+\dfrac{} 
+{\langle \IFNZ{b}{s_1}{s_2}, \sigma \rangle \Rightarrow \langle s_2,\sigma'\rangle}
+ ~~~~~~~\text{if } V b \sigma = \false\\
+ \\
+\dfrac{\langle \mathit{init}, \sigma \rangle \Rightarrow \sigma' } 
+{\langle \FOR{\mathit{init}}{b}{\mathit{incr}}{s}, \sigma \rangle \Rightarrow \langle \WHILE{b}{\SEQ{s}{\mathit{incr}}}, \sigma' \rangle}
+ ~
+&~~~
+\dfrac{\langle \IFNZ{b}{s;\WHILE{b}{s}}{\SKIP}, \sigma \rangle \Rightarrow \langle s_1,\sigma'\rangle} 
+{\langle \WHILE{b}{s}, \sigma \rangle \Rightarrow \langle s_1,\sigma'\rangle}
+\\
+\\
+ \dfrac{\langle \mathit{init}, \sigma \rangle \Rightarrow\langle \mathit{init}', \sigma' \rangle } 
+{\langle \FOR{\mathit{init}}{b}{\mathit{incr}}{s}, \sigma \rangle \Rightarrow \langle \FOR{\mathit{init}'}{b}{\mathit{incr}}{s}, \sigma' \rangle}
+ ~
+&~~~
+\\
+ \end{array}
+\]
+\caption{Extracted small-step rules for a small imperative language.}\label{small-step-rules}
+\end{figure}
+
 \bibliographystyle{plain}
 %\bibliographystyle{splncs}
 \bibliography{refs}
