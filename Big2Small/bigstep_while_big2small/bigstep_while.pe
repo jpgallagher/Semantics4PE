@@ -1,0 +1,177 @@
+/* memo_table(smallStepSolve,run(_21396),run__0(_21396),[crossmodule,entry]). */
+/* memo_table(smallStepSolve,smallStep(bigstep(_21399,_21400,_21401),_21397),smallStep__1(_21399,_21400,_21401,_21397),[internal,run__0(_21412)]). */
+/* memo_table(smallStepSolve,eval(eval(_21398,_21399,_21400,_21401)),eval__2(_21398,_21399,_21400,_21401),[internal,smallStep__1(_21412,_21413,_21414,_21415)]). */
+/* memo_table(smallStepSolve,eval(save(_21398,_21399,_21400,_21401)),eval__3(_21398,_21399,_21400,_21401),[internal,smallStep__1(_21412,_21413,_21414,_21415)]). */
+/* memo_table(smallStepSolve,eval(find(_21398,_21399,_21400)),eval__4(_21398,_21399,_21400),[internal,eval__2(_21410,_21411,_21412,_21413)]). */
+/* memo_table(smallStepSolve,eval(_21398=_21399),eval__5(_21398,_21399),[internal,eval__2(_21408,_21409,_21410,_21411)]). */
+/* memo_table(smallStepSolve,eval(gt(_21398,_21399,_21400)),eval__6(_21398,_21399,_21400),[internal,eval__2(_21410,_21411,_21412,_21413)]). */
+/* memo_table(smallStepSolve,eval(lt(_21398,_21399,_21400)),eval__7(_21398,_21399,_21400),[internal,eval__2(_21410,_21411,_21412,_21413)]). */
+/* memo_table(smallStepSolve,eval(gte(_21398,_21399,_21400)),eval__8(_21398,_21399,_21400),[internal,eval__2(_21410,_21411,_21412,_21413)]). */
+/* memo_table(smallStepSolve,eval(lte(_21398,_21399,_21400)),eval__9(_21398,_21399,_21400),[internal,eval__2(_21410,_21411,_21412,_21413)]). */
+/* memo_table(smallStepSolve,eval(eq(_21398,_21399,_21400)),eval__10(_21398,_21399,_21400),[internal,eval__2(_21410,_21411,_21412,_21413)]). */
+/* memo_table(smallStepSolve,eval(_21398 is _21399),eval__11(_21398,_21399),[internal,eval__2(_21408,_21409,_21410,_21411)]). */
+/* memo_table(smallStepSolve,eval(negate(_21398,_21399)),eval__12(_21398,_21399),[internal,eval__2(_21408,_21409,_21410,_21411)]). */
+/* memo_table(smallStepSolve,eval(_21398\==_21399),eval__13(_21398,_21399),[internal,eval__3(_21408,_21409,_21410,_21411)]). */
+/* memo_table(smallStepSolve,eval(_21398>_21399),eval__14(_21398,_21399),[internal,eval__6(_21408,_21409,_21410)]). */
+/* memo_table(smallStepSolve,eval(_21398=<_21399),eval__15(_21398,_21399),[internal,eval__6(_21408,_21409,_21410)]). */
+/* memo_table(smallStepSolve,eval(_21398<_21399),eval__16(_21398,_21399),[internal,eval__7(_21408,_21409,_21410)]). */
+/* memo_table(smallStepSolve,eval(_21398>=_21399),eval__17(_21398,_21399),[internal,eval__7(_21408,_21409,_21410)]). */
+/* memo_table(smallStepSolve,eval(_21398==_21399),eval__18(_21398,_21399),[internal,eval__10(_21408,_21409,_21410)]). */
+:-use_module(library(terms_vars)).
+:-use_module(chclibs(setops)).
+/* entry(run__0(_21422))*/
+
+/*  run(A) :- run__0(A). */
+run__0([]).
+run__0([bigstep(A,B,C)]) :-
+    smallStep__1(A,B,C,D),
+    run__0(D).
+
+/*  smallStep(bigstep(B,C,D),A) :- smallStep__1(B,C,D,A). */
+smallStep__1(skip,A,A,[]).
+smallStep__1(asg(var(D),C),A,B,[]) :-
+    eval__2(C,A,E,F),
+    eval__3(D,F,E,B).
+smallStep__1(ifthenelse(C,D,_),A,B,[bigstep(D,E,B)]) :-
+    eval__2(C,A,E,1).
+smallStep__1(ifthenelse(C,_,D),A,B,[bigstep(D,E,B)]) :-
+    eval__2(C,A,E,0).
+smallStep__1(while(C,D),A,B,[bigstep(ifthenelse(C,seq(D,while(C,D)),skip),A,B)]).
+smallStep__1(seq(C,D),A,B,[bigstep(D,E,B)]) :-
+    smallStep__1(C,A,E,[]).
+smallStep__1(seq(C,D),A,B,[bigstep(seq(F,D),E,B)]) :-
+    smallStep__1(C,A,G,[bigstep(F,E,G)]).
+smallStep__1(for(C,D,E,F),A,B,[bigstep(while(D,seq(F,E)),G,B)]) :-
+    smallStep__1(C,A,G,[]).
+smallStep__1(for(C,D,E,F),A,B,[bigstep(for(H,D,E,F),G,B)]) :-
+    smallStep__1(C,A,I,[bigstep(H,G,I)]).
+
+/*  eval(eval(A,B,C,D)) :- eval__2(A,B,C,D). */
+eval__2(var(C),A,A,B) :-
+    eval__4(A,C,B).
+eval__2(cns(nat(B)),A,A,B).
+eval__2(add(D,E),A,B,C) :-
+    eval__2(D,A,F,G),
+    eval__2(E,F,B,H),
+    eval__5(C,G+H).
+eval__2(sub(D,E),A,B,C) :-
+    eval__2(D,A,F,G),
+    eval__2(E,F,B,H),
+    eval__5(C,G-H).
+eval__2(mul(D,E),A,B,C) :-
+    eval__2(D,A,F,G),
+    eval__2(E,F,B,H),
+    eval__5(C,G*H).
+eval__2(div(D,E),A,B,C) :-
+    eval__2(D,A,F,G),
+    eval__2(E,F,B,H),
+    eval__5(C,G/H).
+eval__2(D>E,A,B,C) :-
+    eval__2(D,A,F,G),
+    eval__2(E,F,B,H),
+    eval__6(G,H,C).
+eval__2(D<E,A,B,C) :-
+    eval__2(D,A,F,G),
+    eval__2(E,F,B,H),
+    eval__7(G,H,C).
+eval__2(D>=E,A,B,C) :-
+    eval__2(D,A,F,G),
+    eval__2(E,F,B,H),
+    eval__8(G,H,C).
+eval__2(D=<E,A,B,C) :-
+    eval__2(D,A,F,G),
+    eval__2(E,F,B,H),
+    eval__9(G,H,C).
+eval__2(D==E,A,B,C) :-
+    eval__2(D,A,F,G),
+    eval__2(E,F,B,H),
+    eval__10(G,H,C).
+eval__2(logicaland(D,E),A,B,C) :-
+    eval__2(D,A,F,G),
+    eval__2(E,F,B,H),
+    eval__11(C,G/\H).
+eval__2(not(D),A,B,C) :-
+    eval__2(D,A,B,E),
+    eval__12(E,C).
+
+/*  eval(save(A,B,C,D)) :- eval__3(A,B,C,D). */
+eval__3(A,B,[(A,_)|C],[(A,D)|C]) :-
+    eval__11(D,B).
+eval__3(A,B,[(D,E)|C],[(D,E)|F]) :-
+    eval__13(A,D),
+    eval__3(A,B,C,F).
+eval__3(A,B,[],[(A,C)]) :-
+    eval__11(C,B).
+
+/*  eval(find(A,B,C)) :- eval__4(A,B,C). */
+eval__4([(A,B)|_],A,B).
+eval__4([(D,_)|C],A,B) :-
+    eval__13(A,D),
+    eval__4(C,A,B).
+
+/*  eval(A=B) :- eval__5(A,B). */
+eval__5(A,B) :-
+    A=B.
+
+/*  eval(gt(A,B,C)) :- eval__6(A,B,C). */
+eval__6(A,B,1) :-
+    eval__14(A,B).
+eval__6(A,B,0) :-
+    eval__15(A,B).
+
+/*  eval(lt(A,B,C)) :- eval__7(A,B,C). */
+eval__7(A,B,1) :-
+    eval__16(A,B).
+eval__7(A,B,0) :-
+    eval__17(A,B).
+
+/*  eval(gte(A,B,C)) :- eval__8(A,B,C). */
+eval__8(A,B,1) :-
+    eval__17(A,B).
+eval__8(A,B,0) :-
+    eval__16(A,B).
+
+/*  eval(lte(A,B,C)) :- eval__9(A,B,C). */
+eval__9(A,B,1) :-
+    eval__15(A,B).
+eval__9(A,B,0) :-
+    eval__14(A,B).
+
+/*  eval(eq(A,B,C)) :- eval__10(A,B,C). */
+eval__10(A,B,1) :-
+    eval__18(A,B).
+eval__10(A,B,0) :-
+    eval__13(A,B).
+
+/*  eval(A is B) :- eval__11(A,B). */
+eval__11(A,B) :-
+    A is B.
+
+/*  eval(negate(A,B)) :- eval__12(A,B). */
+eval__12(true,false).
+eval__12(false,true).
+
+/*  eval(A\==B) :- eval__13(A,B). */
+eval__13(A,B) :-
+    A\==B.
+
+/*  eval(A>B) :- eval__14(A,B). */
+eval__14(A,B) :-
+    A>B.
+
+/*  eval(A=<B) :- eval__15(A,B). */
+eval__15(A,B) :-
+    A=<B.
+
+/*  eval(A<B) :- eval__16(A,B). */
+eval__16(A,B) :-
+    A<B.
+
+/*  eval(A>=B) :- eval__17(A,B). */
+eval__17(A,B) :-
+    A>=B.
+
+/*  eval(A==B) :- eval__18(A,B). */
+eval__18(A,B) :-
+    A==B.
+/* Specialisation time 4.687999999999988 ms (runtime) */

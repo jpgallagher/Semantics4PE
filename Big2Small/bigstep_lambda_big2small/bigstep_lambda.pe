@@ -1,0 +1,59 @@
+/* memo_table(smallStepSolve,run(_15238),run__0(_15238),[crossmodule,entry]). */
+/* memo_table(smallStepSolve,smallStep(bigstep(_15241,_15242,_15243),_15239),smallStep__1(_15241,_15242,_15243,_15239),[internal,run__0(_15254)]). */
+/* memo_table(smallStepSolve,eval(find(_15240,_15241,_15242)),eval__2(_15240,_15241,_15242),[internal,smallStep__1(_15252,_15253,_15254,_15255)]). */
+/* memo_table(smallStepSolve,eval(save(_15240,_15241,_15242,_15243)),eval__3(_15240,_15241,_15242,_15243),[internal,smallStep__1(_15254,_15255,_15256,_15257)]). */
+/* memo_table(smallStepSolve,eval(_15240\==_15241),eval__4(_15240,_15241),[internal,eval__2(_15250,_15251,_15252)]). */
+/* memo_table(smallStepSolve,eval(_15240=_15241),eval__5(_15240,_15241),[internal,eval__3(_15250,_15251,_15252,_15253)]). */
+:-use_module(library(terms_vars)).
+:-use_module(chclibs(setops)).
+/* entry(run__0(_15264))*/
+
+/*  run(A) :- run__0(A). */
+run__0([]).
+run__0([bigstep(A,B,C)]) :-
+    smallStep__1(A,B,C,D),
+    run__0(D).
+
+/*  smallStep(bigstep(B,C,D),A) :- smallStep__1(B,C,D,A). */
+smallStep__1(val(A),_,A,[]).
+smallStep__1(var(C),A,B,[]) :-
+    eval__2(A,C,B).
+smallStep__1(lam(B,C),A,clo(B,C,A),[]).
+smallStep__1(app4_2(C,D,E,F),A,B,[bigstep(D,A,B)]) :-
+    eval__3(C,F,E,A).
+smallStep__1(app(C,D),A,B,[bigstep(app4_1(D,E,F,G),A,B)]) :-
+    smallStep__1(C,A,clo(E,F,G),[]).
+smallStep__1(app(C,D),A,B,[bigstep(app_aux_3(F,D,A),E,B)]) :-
+    smallStep__1(C,A,clo(G,H,I),[bigstep(F,E,clo(G,H,I))]).
+smallStep__1(app4_1(C,D,E,F),A,B,[bigstep(app4_2(D,E,F,G),_,B)]) :-
+    smallStep__1(C,A,G,[]).
+smallStep__1(app4_1(C,D,E,F),A,B,[bigstep(app4_1(H,D,E,F),G,B)]) :-
+    smallStep__1(C,A,I,[bigstep(H,G,I)]).
+smallStep__1(app_aux_3(C,D,E),A,B,[bigstep(app4_1(D,F,G,H),E,B)]) :-
+    smallStep__1(C,A,clo(F,G,H),[]).
+smallStep__1(app_aux_3(C,D,E),A,B,[bigstep(app_aux_3(G,D,E),F,B)]) :-
+    smallStep__1(C,A,clo(H,I,J),[bigstep(G,F,clo(H,I,J))]).
+
+/*  eval(find(A,B,C)) :- eval__2(A,B,C). */
+eval__2([(A,B)|_],A,B).
+eval__2([(D,_)|C],A,B) :-
+    eval__4(A,D),
+    eval__2(C,A,B).
+
+/*  eval(save(A,B,C,D)) :- eval__3(A,B,C,D). */
+eval__3(A,B,[(A,_)|C],[(A,D)|C]) :-
+    eval__5(D,B).
+eval__3(A,B,[(D,E)|C],[(D,E)|F]) :-
+    eval__4(A,D),
+    eval__3(A,B,C,F).
+eval__3(A,B,[],[(A,C)]) :-
+    eval__5(C,B).
+
+/*  eval(A\==B) :- eval__4(A,B). */
+eval__4(A,B) :-
+    A\==B.
+
+/*  eval(A=B) :- eval__5(A,B). */
+eval__5(A,B) :-
+    A=B.
+/* Specialisation time 1.1669999999999874 ms (runtime) */

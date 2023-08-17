@@ -1,0 +1,113 @@
+:-module(smallStepSolve,_).
+:-use_module(library(terms_vars)).
+:-use_module(chclibs(setops)).
+logen(run/1,run([])).
+logen(run/1,run([A])) :-
+    logen(unfold,bigStepPred(A)),
+    logen(memo,smallStep(A,B)),
+    logen(memo,run(B)).
+logen(smallStep/2,smallStep(A,[])) :-
+    logen(unfold,givenRule(_,A,B)),
+    logen(unfold,evalConditions(B,[])).
+logen(smallStep/2,smallStep(A,[B])) :-
+    logen(unfold,givenRule(_,A,C)),
+    logen(unfold,evalConditions(C,[B])).
+logen(smallStep/2,smallStep(A,B)) :-
+    logen(unfold,rule(C,A,[D,E])),
+    logen(unfold,bigStepPred(D)),
+    logen(memo,smallStep(D,F)),
+    logen(unfold,foldStack(F,E,C,B)).
+logen(foldStack/4,foldStack([],A,_,B)) :-
+    logen(unfold,evalConditions([A],B)).
+logen(foldStack/4,foldStack([C],A,B,[D])) :-
+    logen(unfold,newBigStep(C,A,B,D)).
+logen(rule/3,rule(A,B,C)) :-
+    logen(unfold,givenRule(A,B,C)).
+logen(rule/3,rule(A,B,C)) :-
+    logen(unfold,auxRule(A,B,C)).
+logen(newBigStep/4,newBigStep(A,B,C,D)) :-
+    logen(unfold,givenRule(C,_,[E,F])),
+    logen(call,E=..[_,G,H,_]),
+    logen(call,varset(F,I)),
+    logen(call,setintersect(I,[G,H],J)),
+    logen(unfold,newBigStepPred(J,A,B,C,D)).
+logen(newBigStepPred/5,newBigStepPred([],A,B,C,D)) :-
+    logen(unfold,givenRule(C,D,[A,B])).
+logen(newBigStepPred/5,newBigStepPred([_|_],A,B,C,D)) :-
+    logen(unfold,auxRule(C,D,[A,B])).
+logen(auxRule/3,auxRule(A,B,[C,D])) :-
+    logen(unfold,givenRule(A,E,[F,G])),
+    logen(call,F=..[H,I,J,K]),
+    logen(call,varset(G,L)),
+    logen(call,setintersect(L,[I,J],[M|N])),
+    logen(call,O=..[H,P,Q,K]),
+    logen(unfold,replace(I,P,E,R)),
+    logen(unfold,replace(J,Q,R,S)),
+    logen(call,S=..[H,T,U,V]),
+    logen(call,T=..[W|X]),
+    logen(unfold,newConstructor(W,A,Y)),
+    logen(call,append(X,[M|N],Z)),
+    logen(call,A1=..[Y|Z]),
+    logen(call,B=..[H,A1,U,V]),
+    logen(call,[O,G]=[C,D]).
+logen(newConstructor/3,newConstructor(A,B,C)) :-
+    logen(call,atom_number(D,B)),
+    logen(call,atom_concat(A,'_aux_',E)),
+    logen(call,atom_concat(E,D,C)).
+logen(evalConditions/2,evalConditions([],[])).
+logen(evalConditions/2,evalConditions([A|B],[A|B])) :-
+    logen(unfold,bigStepPred(A)).
+logen(evalConditions/2,evalConditions([B|C],A)) :-
+    logen(unfold,otherPred(B)),
+    logen(memo,eval(B)),
+    logen(unfold,evalConditions(C,A)).
+logen(eval/1,eval(A)) :-
+    logen(unfold,constraint(A)),
+    logen(rescall,call(A)).
+logen(eval/1,eval(A)) :-
+    logen(unfold,givenRule(_,A,B)),
+    logen(unfold,callPreds(B)).
+logen(callPreds/1,callPreds([])).
+logen(callPreds/1,callPreds([A|B])) :-
+    logen(memo,eval(A)),
+    logen(unfold,callPreds(B)).
+logen(otherPred/1,otherPred(A)) :-
+    logen(unfold,givenRule(_,otherPred(A),[])).
+logen(otherPred/1,otherPred(A)) :-
+    logen(unfold,constraint(A)).
+logen(bigStepPred/1,bigStepPred(A)) :-
+    logen(unfold,givenRule(_,bigStepPred(A),[])).
+logen(constraint/1,constraint(_=_)).
+logen(constraint/1,constraint(_<_)).
+logen(constraint/1,constraint(_>_)).
+logen(constraint/1,constraint(_=<_)).
+logen(constraint/1,constraint(_>=_)).
+logen(constraint/1,constraint(_ is _)).
+logen(constraint/1,constraint(_=:=_)).
+logen(constraint/1,constraint(_\==_)).
+logen(constraint/1,constraint(_==_)).
+logen(constraint/1,constraint(_\=_)).
+logen(replace/4,replace(A,B,C,B)) :-
+    logen(call,var(C)),
+    logen(call,C==A).
+logen(replace/4,replace(A,_,B,B)) :-
+    logen(call,var(B)),
+    logen(call,B\==A).
+logen(replace/4,replace(A,B,C,D)) :-
+    logen(call,nonvar(C)),
+    logen(call,C=..[E|F]),
+    logen(unfold,replaceArgs(A,B,F,G)),
+    logen(call,D=..[E|G]).
+logen(replaceArgs/4,replaceArgs(_,_,[],[])).
+logen(replaceArgs/4,replaceArgs(A,B,[C|D],[E|F])) :-
+    logen(unfold,replace(A,B,C,E)),
+    logen(unfold,replaceArgs(A,B,D,F)).
+
+
+
+:- filter
+    run(dynamic).
+:- filter
+    smallStep(nonvar,dynamic).
+:- filter
+    eval(nonvar).
