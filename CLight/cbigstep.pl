@@ -279,8 +279,8 @@ bindParams([],[],[]).
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
 main(Ret) :-
-		globalEnv(Env,St0),
-		copyState(St0,St1),
+	globalEnv(Env,St0),
+	copyState(St0,St1),
         solve(call(main,[]),St0,St1,Ret,Env).
 	
 globalEnv(P,A) :-
