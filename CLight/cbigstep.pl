@@ -54,7 +54,7 @@ eval(call(P,Args),St0,St1,V,Env) :-
 	def(P,Env,Params,Proc),
 	bindParams(Args,Params,Decl),
 	copyState(St0,St1),
-	solve(block(Decl,Proc),St0,St1,return(V),Env).
+	exec(block(Decl,Proc),St0,St1,return(V),Env).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%	
@@ -64,87 +64,87 @@ eval(call(P,Args),St0,St1,V,Env) :-
 
 % Clight semantics Figure 8 
 
-solve(skip,St,St,normal,_).
-solve(continue,St,St,continue,_).
-solve(break,St,St,break,_).
-solve(ret(E),St,St1,return(V),Env) :-		
+exec(skip,St,St,normal,_).
+exec(continue,St,St,continue,_).
+exec(break,St,St,break,_).
+exec(ret(E),St,St1,return(V),Env) :-		
 	eval(E,St,St1,V,Env).
-solve(ret,St,St,return,_).
-solve(seq(S1,_),St,St1,Out,Env) :-
-	solve(S1,St,St1,Out,Env),
+exec(ret,St,St,return,_).
+exec(seq(S1,_),St,St1,Out,Env) :-
+	exec(S1,St,St1,Out,Env),
 	Out \== normal.
-solve(seq(S1,S2),St,St2,Out,Env) :-
+exec(seq(S1,S2),St,St2,Out,Env) :-
 	copyState(St,St1),
-	solve(S1,St,St1,normal,Env),
-	solve(S2,St1,St2,Out,Env).	
-solve(asg(var(X),E),St,St2,normal,Env) :-
+	exec(S1,St,St1,normal,Env),
+	exec(S2,St1,St2,Out,Env).	
+exec(asg(var(X),E),St,St2,normal,Env) :-
 	eval(E,St,St1,V,Env),
 	save(X,V,St1,St2).
 	
 % Clight semantics Figure 9 
 
-solve(while(E,_),St,St1,normal,Env) :-
+exec(while(E,_),St,St1,normal,Env) :-
 	eval(E,St,St1,V1,Env),
 	isFalse(V1).
-solve(while(E,S1),St,St2,Out,Env) :-
+exec(while(E,S1),St,St2,Out,Env) :-
 	eval(E,St,St1,V1,Env),
 	isTrue(V1),
-	solve(S1,St1,St2,Out1,Env),
+	exec(S1,St1,St2,Out1,Env),
 	abnormalLoopEnd(Out1,Out).
-solve(while(E,S1),St,St3,Out,Env) :-
+exec(while(E,S1),St,St3,Out,Env) :-
 	eval(E,St,St1,V1,Env),
 	isTrue(V1),
 	copyState(St1,St2),
-	solve(S1,St1,St2,Out1,Env),
+	exec(S1,St1,St2,Out1,Env),
 	normalLoopEnd(Out1),
-	solve(while(E,S1),St2,St3,Out,Env). 
-solve(for(Init,Cond,Incr,S1),St,St2,Out,Env) :-
+	exec(while(E,S1),St2,St3,Out,Env). 
+exec(for(Init,Cond,Incr,S1),St,St2,Out,Env) :-
 	Init \== skip,
 	copyState(St,St1),
-	solve(Init,St,St1,normal,Env),
-	solve(for(skip,Cond,Incr,S1),St1,St2,Out,Env).
-solve(for(skip,Cond,_,_),St,St1,normal,Env) :-
+	exec(Init,St,St1,normal,Env),
+	exec(for(skip,Cond,Incr,S1),St1,St2,Out,Env).
+exec(for(skip,Cond,_,_),St,St1,normal,Env) :-
 	eval(Cond,St,St1,V1,Env),
 	isFalse(V1).
-solve(for(skip,Cond,_,S1),St,St2,Out,Env) :-
+exec(for(skip,Cond,_,S1),St,St2,Out,Env) :-
 	eval(Cond,St,St1,V1,Env),
 	isTrue(V1),
-	solve(S1,St1,St2,Out1,Env),
+	exec(S1,St1,St2,Out1,Env),
 	abnormalLoopEnd(Out1,Out).
-solve(for(skip,Cond,Incr,S1),St,St4,Out,Env) :-
+exec(for(skip,Cond,Incr,S1),St,St4,Out,Env) :-
 	eval(Cond,St,St1,V1,Env),
 	isTrue(V1),
 	copyState(St1,St2),
-	solve(S1,St1,St2,Out1,Env),
+	exec(S1,St1,St2,Out1,Env),
 	normalLoopEnd(Out1),
 	copyState(St2,St3),
-	solve(Incr,St2,St3,normal,Env),
-	solve(for(skip,Cond,Incr,S1),St3,St4,Out,Env). 
+	exec(Incr,St2,St3,normal,Env),
+	exec(for(skip,Cond,Incr,S1),St3,St4,Out,Env). 
 	
 % Clight semantics Figure 10
 
-solve(call(P,Args),St,St1,Ret,Env) :-
+exec(call(P,Args),St,St1,Ret,Env) :-
 	def(P,Env,Params,Proc),
 	bindParams(Args,Params,Decl),
-	solve(block(Decl,Proc),St,St1,Ret,Env).
+	exec(block(Decl,Proc),St,St1,Ret,Env).
 	
 % other statements
 
-solve(ifthenelse(E,S1,_),St,St2,Out,Env) :-
+exec(ifthenelse(E,S1,_),St,St2,Out,Env) :-
 	eval(E,St,St1,V1,Env),
 	isTrue(V1),
-	solve(S1,St1,St2,Out,Env).
-solve(ifthenelse(E,_,S2),St,St2,Out,Env) :-
+	exec(S1,St1,St2,Out,Env).
+exec(ifthenelse(E,_,S2),St,St2,Out,Env) :-
 	eval(E,St,St1,V1,Env),
 	isFalse(V1),
-	solve(S2,St1,St2,Out,Env).
-solve(block(Decl,S),St,St3,Ret,Env) :-
+	exec(S2,St1,St2,Out,Env).
+exec(block(Decl,S),St,St3,Ret,Env) :-
 	localState(Decl,St,St1,Env),
 	copyState(St1,St2),
-	solve(S,St1,St2,Ret,Env),
+	exec(S,St1,St2,Ret,Env),
 	restoreState(St2,Decl,St,St3).
-solve(let(Var,E,S),St,St1,Ret,Env) :-
-	solve(block([decl(Var,E)],S),St,St1,Ret,Env).
+exec(let(Var,E,S),St,St1,Ret,Env) :-
+	exec(block([decl(Var,E)],S),St,St1,Ret,Env).
 	
 abnormalLoopEnd(break,normal).
 abnormalLoopEnd(return,return).
@@ -281,7 +281,7 @@ bindParams([],[],[]).
 main(Ret) :-
 	globalEnv(Env,St0),
 	copyState(St0,St1),
-        solve(call(main,[]),St0,St1,Ret,Env).
+        exec(call(main,[]),St0,St1,Ret,Env).
 	
 globalEnv(P,A) :-
 	program(P),
@@ -428,7 +428,7 @@ program(
    )
 ]).
 */
-
+/*
 program(
 [
  function(
@@ -452,7 +452,9 @@ program(
    )
 ]).
 
-/*
+*/
+
+
 program(
 [
  function(
@@ -474,7 +476,6 @@ program(
    call(fact,[cns(nat(10))])
    )
 ]).
-*/
 	
 
 
