@@ -179,3 +179,53 @@ eo(N,V) :-
 	evenodd(N,E),
 	eval(E,V).
 	
+/* 
+
+Factorial by fixpoint 
+
+G = lambda f.lambda n.if n=0 then 1 else n*f(n-1)
+
+G fact = lambda n.if n=0 then 1 else n*fact(n-1) = fact
+
+Y G = fact
+
+((Y G) n) = (fact n)
+
+*/
+
+ycomb(
+	fun(id(f),apply(fun(id(x),apply(id(x),id(x))),fun(id(x),apply(id(x),id(x)))))
+	).
+	
+	
+g(fun(id(f),
+	fun(id(n), 
+		if(le(id(n),num(0)), 
+			num(1), 
+			times(id(n),apply(id(f),sub(id(n),num(1)))))))).
+	
+fixfact(N,M) :-
+	ycomb(Y),
+	g(G),
+	eval(apply(apply(Y,G),num(N)),M).
+	
+fixg(F) :-
+	ycomb(Y),
+	g(G),
+	eval(apply(Y,G),F).
+	
+y(V) :-
+	ycomb(Y),
+	eval(Y,V).
+	
+/* from Wikipedia article on fixpoint combinator
+
+let rec fix f x = f (fix f) x (* note the extra x; here fix f = \x-> f
+(fix f) x *)
+
+let factabs fact = function   (* factabs has extra level of lambda
+abstraction *) 0 -> 1
+ | x -> x * fact (x-1)
+
+let _ = (fix factabs) 5       (* evaluates to "120" *) 
+*/

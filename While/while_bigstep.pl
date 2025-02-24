@@ -1,4 +1,4 @@
-:- module(bigstep,_).
+:- module(while_bigstep,_).
 
 %%%%%%%%%%%%%%%%%%%%%%%%
 %----- expressions -----
@@ -72,10 +72,10 @@ solve(call(P,Args),St,St1,Ret,Env) :-
 	%copyStateMap(St,St1),
 	solve(block(Decl,Proc),St,St1,Ret,Env).
 solve(asg(var(X),E),St,St1,_Ret,Env) :-
-	StateMap(St,St1),
+	%StateMap(St,St1),
 	evalAndSave(X,E,St,St1,Env).
 solve(seq(S1,S2),St,St2,Ret,Env) :-
-	%copyStateMap(St,St1),
+	copyStateMap(St,St1),
 	solve(S1,St,St1,_,Env),
 	solve(S2,St1,St2,Ret,Env).
 solve(ifthenelse(E,S1,_),St,St2,Ret,Env) :-
@@ -100,7 +100,7 @@ solve(for(Init,Cond,Incr,S1),St,St2,Ret,Env) :-
 solve(block(Decl,S),St,St3,Ret,Env) :-
 	extendStateMap(Decl,St,St1),
 	localState(Decl,St,St1,Env),
-	%copyStateMap(St1,St2),
+	copyStateMap(St1,St2),
 	solve(S,St1,St2,Ret,Env),
 	restoreState(St2,Decl,St,St3).
 solve(let(Var,E,S),St,St1,Ret,Env) :-
@@ -177,8 +177,11 @@ newvar(X,[(Y,M)|St],[(Y,M)|St1]) :-
 newvar(X,[],[(X,V)]) :-
 	V=_Val.
 
-def(P,Env,Params,S) :-
-	member(function(P,Params,S),Env).
+def(P,[function(Q,Params,S)|_],Params,S) :-
+	P==Q.
+def(P,[function(Q,_,_)|Env],Params,S) :-
+	P\==Q,
+	def(P,Env,Params,S).
 
 gt(X,Y,1) :-
 	X > Y.
@@ -254,15 +257,15 @@ bindParams([],[],[]).
 % initial setup and entry
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
-go(Ret) :-
-		globalEnv(Env,St0,Args),
+go(F,Ret) :-
+		globalEnv(F,Env,St0,Args),
 		%copyStateMap(St0,St1),
-        solve(call(main,Args),St0,St1,Ret,Env).
+        solve(call(main,Args),St0,_St1,Ret,Env).
 	
-globalEnv(P,A,Args) :-
-	program(P),
-	member(function(main,Args,_),P),
-	vardecls(P,A).
+globalEnv(F,P,St,Args) :-
+	program(F,P),
+	def(main,P,Args,St),
+	vardecls(P,St).
 
 vardecls([],[]).
 vardecls([[vardecl(var(X),_,Init)]|P],[(X,V)|St]) :-
@@ -282,8 +285,8 @@ initDeclVal(null,_).
 
 
 
-/*
-program(
+
+program(ex1,
 [
  function(
    main,
@@ -328,9 +331,9 @@ program(
      )
    )
 ]).
-*/
-/*
-program(
+
+
+program(fib,
 [
  function(
    fib,
@@ -404,10 +407,9 @@ program(
      )
    )
 ]).
-*/
 
 
-program(
+program(fact,
 [
  function(
    fact,
@@ -429,8 +431,8 @@ program(
    )
 ]).
 
-/*
-program(
+
+program(ex2,
 [
  [
   vardecl(var(m),int,cns(nat(5)))
@@ -469,9 +471,9 @@ program(
      )
    )
 ]).
-*/
-/*
-program(
+
+
+program(ex3,
 [
  [
   vardecl(var(n),int,null)
@@ -524,4 +526,16 @@ program(
    call(f,[var(n)])
    )
 ]).
-*/
+
+% No global variables in fact or fib, so they can be called directly
+
+fact(N,M) :-
+	program(fact,P),
+	solve(call(fact,[cns(nat(N))]),[],_St1,M,P).
+	
+fib(N,M) :-
+	program(fib,P),
+	solve(call(fib,[cns(nat(N))]),[],_St1,M,P).
+	
+
+

@@ -30,4 +30,3 @@ bigStepPred(bigstep(_,_,_)).
 
 otherPred(find(_,_,_)).
 otherPred(save(_,_,_,_)).
-

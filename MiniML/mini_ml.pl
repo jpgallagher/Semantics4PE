@@ -3,7 +3,7 @@
 
 :-module(mini_ml,_,[assertions]).
 
-:- entry testfac(_,_).
+%:- entry testfac(_,_).
 
 go(E,V) :-
 	init(Rho),
@@ -32,6 +32,7 @@ eval(if(E1,_,E3),Alpha,Rho) :-
 eval(mlpair(E1,E2),(Alpha,Beta),Rho) :-
 	eval(E1,Alpha,Rho),
 	eval(E2,Beta,Rho).
+/*
 eval(apply(E1,E2),Beta,Rho) :-
 	eval(E1,closure(P,E,Rho1),Rho),
 	eval(E2,Alpha,Rho),
@@ -40,6 +41,11 @@ eval(apply(E1,E2),Beta,Rho) :-
 	eval(E1,opaque(Op),Rho),
 	eval(E2,Alpha,Rho),
 	opeval(Op,Alpha,Beta).
+*/
+% locally deterministic version for apply
+eval(apply(E1,E2),Beta,Rho) :-
+	eval(E1,Gamma,Rho),
+	functionKind(Gamma,E2,Rho,Beta).
 eval(let(P,E2,E1),Beta,Rho) :-
 	eval(E2,Alpha,Rho),
 	eval(E1,Beta,[(P,Alpha)|Rho]).
@@ -47,6 +53,13 @@ eval(letrec(P,E2,E1),Beta,Rho) :-
 	eval(E2,Alpha,[(P,Alpha)|Rho]),
 	%unify_with_occurs_check(Alpha,Alpha1),
 	eval(E1,Beta,[(P,Alpha)|Rho]).
+	
+functionKind(closure(P,E,Rho1),E2,Rho,Beta) :-
+	eval(E2,Alpha,Rho),
+	eval(E,Beta,[(P,Alpha)|Rho1]).
+functionKind(opaque(Op),E2,Rho,Beta) :-
+	eval(E2,Alpha,Rho),
+	opeval(Op,Alpha,Beta).
 	
 val_of([(id(I),Alpha)|_Rho],I,Alpha).
 val_of([(id(X),_Beta)|Rho],I,Alpha) :-
@@ -70,7 +83,7 @@ opeval(plus,(int(X),int(Y)),int(Z)) :-
 	
 
 test1(V) :-
-	fac(E),
+	ffac(E),
 	go(E,V).
 	
 test2(V) :-
@@ -81,8 +94,8 @@ test3(V) :-
 	simul(E),
 	go(E,V).
 
-test4(V) :-
-	evenodd(E),
+test4(N,V) :-
+	evenodd(N,E),
 	go(E,V).
 
 test5(V) :-
@@ -91,7 +104,7 @@ test5(V) :-
 
 /* letrec fact= 𝜆x.if x = 0 then 1 else x * fact(x - 1) in fact 4 */
 
-fac(
+ffac(
 	letrec(id(fact),
 		lambda(id(x),
 		if(apply(id(eq),mlpair(id(x),number(0))),
@@ -132,7 +145,7 @@ simul(
     in even(3)
 */
 
-evenodd(
+evenodd(N,
 	letrec(
 		pairpat(id(even),id(odd)),
 		mlpair(
@@ -149,8 +162,8 @@ evenodd(
 					apply(id(sub),mlpair(id(x),number(1))))
 			))
 			),
-		%apply(id(even),number(4))
-		mlpair(id(even),id(odd))
+		apply(id(even),number(N))
+		%mlpair(id(even),id(odd))
 	)).
 	
 % factorial applied to N
@@ -171,7 +184,43 @@ fact(N,
 	).
 	
 	
-testfac(N,V) :-
+fac(N,V) :-
 	fact(N,E),
-	go(E,V).
+	go(E,int(V)).
 	
+eo(N,B) :-
+	evenodd(N,E),
+	go(E,B).
+	
+	
+/* fixpoints */
+
+ycomb(
+	lambda(id(f),apply(lambda(id(x),apply(id(x),id(x))),lambda(id(x),apply(id(x),id(x)))))
+	).
+	
+	
+g(lambda(id(f),
+	lambda(id(x),
+		if(apply(id(eq),mlpair(id(x),number(0))),
+			number(1),
+			apply(id(times),
+				mlpair(id(x),
+					apply(id(f),
+						apply(id(sub),mlpair(id(x),number(1))))
+				)
+			)
+		)
+	)
+   )
+ ).
+	
+fixfact(N,M) :-
+	ycomb(Y),
+	g(G),
+	go(apply(apply(Y,G),number(N)),M).
+	
+fixg(F) :-
+	ycomb(Y),
+	g(G),
+	go(apply(Y,G),F).
