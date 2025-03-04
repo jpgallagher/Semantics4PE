@@ -6,11 +6,11 @@
 
 % Interpreter
 
-chisel(File) :-
+chisel(File,Max) :-
 	open(File,read,S),
 	read(S,D),
 	close(S),
-	interpreter(D,5,_Env1).
+	interpreter(D,Max,_Env1).
 		
 
 interpreter(Design,Max,Env1) :-
@@ -299,8 +299,10 @@ addenv(Env1,[(X,V)|Env2],Env) :-
 addentry(X,V,[],[(X,V)]).
 addentry(X,_,[(X,W)|Env],[(X,W)|Env]).
 addentry(X,V,[(Y,W)|Env],[(Y,W)|Env1]) :-
-	X\==Y,
+	X @> Y,
 	addentry(X,V,Env,Env1).
+addentry(X,V,[(Y,W)|Env],[(X,V),(Y,W)|Env]) :-
+	X @< Y.
 	
 getv([(X,V)|_],X,V).
 getv([(Y,_)|Env],X,V) :-
@@ -320,6 +322,10 @@ getMod(M,[Mod1|Mods],Mod) :-
 	M1 \== M,
 	getMod(M,Mods,Mod).
 	
+env_skeleton([],[]).
+env_skeleton([(X,_)|E1],[(X,_)|E2]) :-
+	env_skeleton(E1,E2).
+
 	
 % Tests
 
