@@ -1,6 +1,7 @@
 % Chisel semantics
 % From Rosendahl and Kirkeby 
 % and https://github.com/madsrosendahl/ChiselInterval
+% With structured environment (CEnv, ME1,....,MEn)
 
 :-module(chisel,_).
 
@@ -15,6 +16,7 @@ chisel(File,Max) :-
 
 interpreter(Design,Max,Env1) :-
 	init(Design,Env0),
+	%env_skeleton(Env0,Env1),
 	iterate(Design,0,Max,Env0,Env1).
 	
 writeenv(J,Env) :-
@@ -28,17 +30,17 @@ iterate(Design,J,Max,Env0,Env3) :-
 	J<Max,
 	writeenv(J,Env0),
 	tt(Design,Env0,Env1),
-	addenv(Env1,Env0,Env2),
+	addenvs(Env1,Env0,Env2),
 	J1 is J+1,
+	%env_skeleton(Env0,Env2),
+	%env_skeleton(Env0,Env3),
 	iterate(Design,J1,Max,Env2,Env3).
-	
 	
 % Initialisation
 
-init(design(Mods,Conns,MDcls),Env) :-
-	mm(Mods,MDcls,Env1),
-	cc(Conns,Env2),
-	addenv(Env1,Env2,Env).
+init(design(Mods,Conns,MDcls),(CEnv,MEnv)) :-
+	mm(Mods,MDcls,MEnv),
+	cc(Conns,CEnv).
 	
 cc(Cons,Env) :-
 	cc_n(Cons,[],Env,1).
@@ -53,10 +55,9 @@ cc_n([conn(var(M1),var(Out1),var(M2),var(In2))|Cs],Env0, Env,I) :-
 	I1 is I+1,
 	cc_n(Cs,Env5,Env,I1).
 	
-mm([DL|MDcls],Mods,Env) :-
-	mm(MDcls,Mods,Env1),
-	mm_dl(DL,Mods,Env2),
-	addenv(Env1,Env2,Env).
+mm([DL|MDcls],Mods,[MEnv|Env]) :-
+	mm(MDcls,Mods,Env),
+	mm_dl(DL,Mods,MEnv).
 mm([],_,[]).
 
 mm_dl(val(var(MVal),var(M)),Mods,Env) :-
@@ -94,84 +95,83 @@ dd_array(N,J,V,MVal,Env1,Env) :-
 % Channel reset
 
 	
-reset_chans([conn(var(M1),var(Out1),_M2,_In2)|Chans],Env,Env1,Env3) :-
+reset_chans([conn(var(M1),var(Out1),_M2,_In2)|Chans],Env,Env3) :-
 	getv(Env,(M1:Out1),I),
 	getv(Env,(I:ready),R),
-	set_chan(R,I,Env1,Env2),
-	reset_chans(Chans,Env,Env2,Env3).
-reset_chans([],_,Env,Env).
+	set_chan(R,I,Env1),
+	reset_chans(Chans,Env,Env2),
+	addenv(Env1,Env2,Env3).
+reset_chans([],_,[]).
 
 	
-set_chan(0,I,Env1,Env2) :-
-	addenv(Env1,[(I:ready,1),(I:valid,0)],Env2).
-set_chan(R,_,Env,Env) :-
+set_chan(0,I,[(I:ready,1),(I:valid,0)]).
+set_chan(R,_,[]) :-
 	R\==0.
 
 % State transitions
 
-tt(design(Mods,Conns,MDcls),Env0,Env) :-
-	reset_chans(Conns,Env0,[],Env1),
-	td(Mods,MDcls,Env0,Env2),
-	addenv(Env2,Env1,Env).
+tt(design(Mods,Conns,MDcls),(CEnv0,Env0),(CEnv3,Env1)) :-
+	td(Mods,MDcls,(CEnv0,Env0),(CEnv1,Env1)),
+	reset_chans(Conns,CEnv0,CEnv2),
+	addenv(CEnv1,CEnv2,CEnv3).
 	
-td([val(var(MVal),var(M))|MDcls],Mods,Env0,Env) :-
-	td(MDcls,Mods,Env0,Env1),
+td([val(var(MVal),var(M))|MDcls],Mods,(CEnv0,[MEnv0|Envs0]),(CEnv3,[MEnv2|Envs1])) :-
 	getMod(M,Mods,Mod),
-	t_mod(Mod,MVal,Env0,Env2),
-	addenv(Env2,Env1,Env).
-td([],_,_Env,[]).
-
+	t_mod(Mod,MVal,(CEnv0,MEnv0),(CEnv2,MEnv2)),
+	td(MDcls,Mods,(CEnv0,Envs0),(CEnv1,Envs1)),
+	addenv(CEnv2,CEnv1,CEnv3).
+td([],_,_Env,([],[])).
 	
 t_mod(module(_M,_Ds,Ss),MVal,Env0,Env) :-
 	t_ss(Ss,MVal,Env0,Env).
 
-t_ss(Ss,MVal,Env0,Env) :-
+t_ss(Ss,MVal,(CEnv,Env0),Env) :-
 	getv(Env0,MVal:state,N),
 	getstate(Ss,N,S),
-	t_state(S,MVal,Env0,Env).
+	t_state(S,MVal,(CEnv,Env0),Env).
 	
 t_state(state(_N,Cmd,Ss,Goto),MVal,Env,Env1) :-
 	ee(Cmd,MVal,Env,V),
 	state_when(V,Ss,Goto,MVal,Env,Env1).
 	
-state_when(V,_Ss,_Goto,_M,_Env,[]) :-
+state_when(V,_Ss,_Goto,_M,_Env,([],[])) :-
 	V\==1.
 state_when(1,Ss,Goto,MVal,Env0,Env3) :-
 	tt_stmts(Ss,MVal,Env0,Env1),
 	eg(Goto,MVal,Env0,Env2),
-	addenv(Env1,Env2,Env3).
+	addenv2(Env1,Env2,Env3).
 	
 tt_stmts([Stm|Stmts],MVal,Env0,Env3) :-
 	tt_stmt(Stm,MVal,Env0,Env1),
 	tt_stmts(Stmts,MVal,Env0,Env2),
-	addenv(Env1,Env2,Env3).
-tt_stmts([],_MVal,_Env0,[]).
+	addenv2(Env1,Env2,Env3).
+tt_stmts([],_MVal,_Env0,([],[])).
 	
 tt_stmt(asg(var(Lhs),Rhs),MVal,Env0,Env1) :-
 	ee(Rhs,MVal,Env0,V),
-	Env1=[(MVal:Lhs,V)].
+	Env1=([],[(MVal:Lhs,V)]).
 tt_stmt(asgmem(array(var(A),J),Rhs),MVal,Env0,Env1) :-
 	ee(Rhs,MVal,Env0,V),
 	ee(J,MVal,Env0,VJ),
-	Env1=[(MVal:array(A,VJ),V)].
-tt_stmt(readmem(Lhs,array(var(A),J)),MVal,Env0,Env1) :-
-	ee(J,MVal,Env0,VJ),
+	Env1=([],[(MVal:array(A,VJ),V)]).
+tt_stmt(readmem(Lhs,array(var(A),J)),MVal,(CEnv,Env0),Env1) :-
+	ee(J,MVal,(CEnv,Env0),VJ),
 	getv(Env0,MVal:array(A,VJ),V),
-	Env1=[(MVal:Lhs,V)].
-tt_stmt(write(Ch,Rhs),MVal,Env0,Env1) :-
-	getv(Env0,MVal:Ch,J),
-	ee(Rhs,MVal,Env0,V),
-	Env1=[(J:data,V),(J:valid,1)].
-tt_stmt(read(Lhs,Ch),MVal,Env0,Env1) :-
-	getv(Env0,MVal:Ch,J),
-	getv(Env0,J:data,V),
-	Env1=[(MVal:Lhs,V),(J:ready,0)].
+	Env1=([],[(MVal:Lhs,V)]).
+tt_stmt(write(Ch,Rhs),MVal,(CEnv,Env0),Env1) :-
+	getv(CEnv,MVal:Ch,J),
+	ee(Rhs,MVal,(CEnv,Env0),V),
+	Env1=([(J:data,V),(J:valid,1)],[]).
+tt_stmt(read(Lhs,Ch),MVal,(CEnv,_Env0),Env1) :-
+	getv(CEnv,MVal:Ch,J),
+	getv(CEnv,J:data,V),
+	Env1=([(J:ready,0)],[(MVal:Lhs,V)]).
 	
 
 % Expression evaluation
 
 ee(num(N),_,_,N).
-ee(var(X),MVal,Env,V) :-
+ee(var(X),MVal,(_,Env),V) :-
 	getv(Env,MVal:X,V).
 ee(mux(E0,E1,E2),MVal,Env,V) :-
 	ee(E0,MVal,Env,V1),
@@ -181,15 +181,15 @@ ee(Term,MVal,Env,V) :-
 	ee(E1,MVal,Env,V1),
 	ee(E2,MVal,Env,V2),
 	binop(Op,V1,V2,V).
-ee(ready(S),MVal,Env,V) :-
-	getv(Env,MVal:S,Ch),
-	getv(Env,Ch:ready,R1),
-	getv(Env,Ch:valid,R2),
+ee(ready(S),MVal,(CEnv,_),V) :-
+	getv(CEnv,MVal:S,Ch),
+	getv(CEnv,Ch:ready,R1),
+	getv(CEnv,Ch:valid,R2),
 	ret_ready(R1,R2,V).
-ee(valid(S),MVal,Env,V) :-
-	getv(Env,MVal:S,Ch),
-	getv(Env,Ch:ready,R1),
-	getv(Env,Ch:valid,R2),
+ee(valid(S),MVal,(CEnv,_),V) :-
+	getv(CEnv,MVal:S,Ch),
+	getv(CEnv,Ch:ready,R1),
+	getv(CEnv,Ch:valid,R2),
 	ret_valid(R1,R2,V).
 	
 ret_ready(1,0,1).
@@ -278,7 +278,7 @@ ee_choice(V1,_E1,E2,MVal,Env,V) :-
 	ee(E2,MVal,Env,V).
 
 eg(next(N),MVal,_,Env) :-
-	Env=[(MVal:state,N)].
+	Env=([],[(MVal:state,N)]).
 eg(mux(Exp,G1,G2),MVal,Env,Env1) :-
 	ee(Exp,MVal,Env,V),
 	goto_choice(V,G1,G2,MVal,Env,Env1).
@@ -291,10 +291,24 @@ goto_choice(V,_,G2,M,Env,Env1) :-
 	
 % utilities
 
-addenv(Env,[],Env).
+addenv(Env,[],Env1) :-
+	addentries(Env,[],Env1). % to ensure sorted result
 addenv(Env1,[(X,V)|Env2],Env) :-
 	addentry(X,V,Env1,Env3),
 	addenv(Env3,Env2,Env).
+	
+addenv2((C1,E1),(C2,E2),(C3,E3)) :-
+	addenv(C1,C2,C3),
+	addenv(E1,E2,E3).
+	
+addenvs((C1,E1),(C2,E2),(C3,E3)) :-
+	addenv(C1,C2,C3),
+	addenvlist(E1,E2,E3).
+	
+addenvlist([],[],[]). % to ensure sorted result
+addenvlist([E1|Es1],[E2|Es2],[E3|Es3]) :-
+	addenv(E1,E2,E3),
+	addenvlist(Es1,Es2,Es3).
 	
 addentry(X,V,[],[(X,V)]).
 addentry(X,_,[(X,W)|Env],[(X,W)|Env]).
@@ -303,6 +317,11 @@ addentry(X,V,[(Y,W)|Env],[(Y,W)|Env1]) :-
 	addentry(X,V,Env,Env1).
 addentry(X,V,[(Y,W)|Env],[(X,V),(Y,W)|Env]) :-
 	X @< Y.
+	
+addentries([(X,V)|Env],Env0,Env2) :-
+	addentry(X,V,Env0,Env1),
+	addentries(Env,Env1,Env2).
+addentries([],Env,Env).
 	
 getv([(X,V)|_],X,V).
 getv([(Y,_)|Env],X,V) :-
@@ -343,7 +362,7 @@ test7 :-
 	interpreter(D,35,_Env1).
 test8 :-
 	prog8(D),
-	interpreter(D,21,_Env1).
+	interpreter(D,20,_Env1).
 test9 :-
 	prog9(D),
 	interpreter(D,21,_Env1).
