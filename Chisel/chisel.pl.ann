@@ -141,12 +141,12 @@ logen(ee/4,ee(ready(C),A,(D,_),B)) :-
     logen(unfold,getv(D,A:C,E)),
     logen(unfold,getv(D,E:ready,F)),
     logen(unfold,getv(D,E:valid,G)),
-    logen(unfold,ret_ready(F,G,B)).
+    logen(memo,ret_ready(F,G,B)).
 logen(ee/4,ee(valid(C),A,(D,_),B)) :-
     logen(unfold,getv(D,A:C,E)),
     logen(unfold,getv(D,E:ready,F)),
     logen(unfold,getv(D,E:valid,G)),
-    logen(unfold,ret_valid(F,G,B)).
+    logen(memo,ret_valid(F,G,B)).
 logen(ret_ready/3,ret_ready(1,0,1)).
 logen(ret_ready/3,ret_ready(1,1,0)).
 logen(ret_ready/3,ret_ready(0,0,0)).
@@ -313,6 +313,10 @@ logen(writeenv/2,writeenv(A,(B,C))) :-
 	logicaland(dynamic,dynamic,dynamic).
 :- filter
 	logicalor(dynamic,dynamic,dynamic).
+:- filter
+	ret_ready(dynamic,dynamic,dynamic).
+:- filter
+	ret_valid(dynamic,dynamic,dynamic).
 
 
 
