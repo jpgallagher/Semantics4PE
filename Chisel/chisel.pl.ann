@@ -1,0 +1,318 @@
+:-module(chisel,_).
+logen(chisel/2,chisel(A,B)) :-
+    logen(call,open(A,read,C)),
+    logen(call,read(C,D)),
+    logen(call,close(C)),
+    logen(unfold,interpreter(D,B)).
+logen(interpreter/2,interpreter(A,B)) :-
+    logen(unfold,init(A,C)),
+    logen(memo,iterate(A,0,B,C)).
+logen(iterate/4,iterate(_,A,B,_)) :-
+    logen(rescall,A>=B).
+logen(iterate/4,iterate(design(C,D,E),A,B,(F,G))) :-
+    logen(rescall,A<B),
+    %logen(memo,writeenv(A,(F,G))),
+    logen(unfold,env_skeleton((F,G),(H,I))),
+    logen(unfold,tt(design(C,D,E),(F,G),(H,I))),
+    logen(rescall,J is A+1),
+    logen(memo,iterate(design(C,D,E),J,B,(H,I))).
+logen(init/2,init(design(A,B,C),(D,E))) :-
+    logen(unfold,mm(A,C,E)),
+    logen(unfold,cc(B,D)).
+logen(cc/2,cc(A,B)) :-
+    logen(unfold,cc_n(A,[],B,1)).
+logen(cc_n/4,cc_n([],A,A,_)).
+logen(cc_n/4,cc_n([conn(var(E),var(F),var(G),var(H))|D],A,B,C)) :-
+    logen(unfold,addenv(A,[(C:ready,0),(C:valid,0),(C:data,0),(E:F,C),(G:H,C)],I)),
+    logen(call,J is C+1),
+    logen(unfold,cc_n(D,I,B,J)).
+logen(mm/3,mm([B|C],A,[D|E])) :-
+    logen(unfold,mm(C,A,E)),
+    logen(unfold,mm_dl(B,A,D)).
+logen(mm/3,mm([],_,[])).
+logen(mm_dl/3,mm_dl(val(var(C),var(D)),A,B)) :-
+    logen(unfold,getMod(D,A,E)),
+    logen(unfold,dd(E,C,B)).
+logen(dd/3,dd(module(_,C,_),A,B)) :-
+    logen(unfold,dd_d(C,A,D)),
+    logen(unfold,addenv([(A:state,1)],D,B)).
+logen(dd_d/3,dd_d([vardecl(_,var(D),num(E))|C],A,B)) :-
+    logen(unfold,dd_d(C,A,F)),
+    logen(unfold,addenv(F,[(A:D,E)],B)).
+logen(dd_d/3,dd_d([arraydecl(_,D,var(E))|C],A,B)) :-
+    logen(unfold,dd_d(C,A,F)),
+    logen(unfold,dd_array(D,0,E,A,F,B)).
+logen(dd_d/3,dd_d([indecl(_)|C],A,B)) :-
+    logen(unfold,dd_d(C,A,B)).
+logen(dd_d/3,dd_d([outdecl(_)|C],A,B)) :-
+    logen(unfold,dd_d(C,A,B)).
+logen(dd_d/3,dd_d([],_,[])).
+logen(dd_array/6,dd_array(A,B,_,_,C,C)) :-
+    logen(call,B>=A).
+logen(dd_array/6,dd_array(A,B,C,D,E,F)) :-
+    logen(call,B<A),
+    logen(unfold,addenv(E,[(D:array(C,B),0)],G)),
+    logen(call,H is B+1),
+    logen(unfold,dd_array(A,H,C,D,G,F)).
+logen(reset_chans/3,reset_chans([conn(var(D),var(E),_,_)|C],A,B)) :-
+    logen(unfold,getv(A,D:E,F)),
+    logen(unfold,getv(A,F:ready,G)),
+    logen(unfold,getv(A,F:valid,H)),
+    logen(call,I=[(F:ready,_),(F:valid,_)]),
+    logen(memo,set_chan(G,F,H,I)),
+    logen(unfold,reset_chans(C,A,J)),
+    logen(unfold,addenv(I,J,B)).
+logen(reset_chans/3,reset_chans([],_,[])).
+logen(set_chan/4,set_chan(0,A,_,[(A:ready,1),(A:valid,0)])).
+logen(set_chan/4,set_chan(1,A,B,[(A:ready,1),(A:valid,B)])).
+logen(tt/3,tt(design(A,B,C),(D,E),(F,G))) :-
+    logen(unfold,storelist_skel(E,G)),
+    logen(unfold,reset_chans(B,D,H)),
+    logen(unfold,addenv(H,D,I)),
+    logen(unfold,store_skel(I,F)),
+    logen(unfold,td(A,C,I,(D,E),(F,G))).
+logen(td/5,td([val(var(D),var(E))|C],A,B,(F,[G|H]),(I,[J|K]))) :-
+    logen(unfold,getMod(E,A,L)),
+    logen(unfold,store_skel(G,J)),
+    logen(unfold,store_skel(F,M)),
+    logen(memo,t_mod(L,D,B,(F,G),(M,J))),
+    logen(unfold,td(C,A,M,(F,H),(I,K))).
+logen(td/5,td([],_,A,_,(A,[]))).
+logen(t_mod/5,t_mod(module(_,_,C),A,B,(D,E),(F,G))) :-
+    logen(unfold,t_ss(C,A,(D,E),(H,I))),
+    logen(unfold,addenv(I,E,G)),
+    logen(unfold,addenv(H,B,F)).
+logen(t_ss/4,t_ss(A,B,(D,E),C)) :-
+    logen(unfold,getv(E,B:state,F)),
+    logen(unfold,getstate(A,F,G)),
+    logen(unfold,t_state(G,B,(D,E),C)).
+logen(t_state/4,t_state(state(_,D,E,F),A,B,C)) :-
+    logen(unfold,ee(D,A,B,G)),
+    logen(unfold,state_when(G,E,F,A,B,C)).
+logen(state_when/6,state_when(A,_,_,_,(_,_),([],[]))) :-
+    logen(rescall,A\==1).
+logen(state_when/6,state_when(1,A,B,C,D,E)) :-
+    logen(unfold,tt_stmts(A,C,D,F)),
+    logen(unfold,eg(B,C,D,G)),
+    logen(unfold,addenv2(F,G,E)).
+logen(tt_stmts/4,tt_stmts([D|E],A,B,C)) :-
+    logen(unfold,tt_stmt(D,A,B,F)),
+    logen(unfold,tt_stmts(E,A,B,G)),
+    logen(unfold,addenv2(F,G,C)).
+logen(tt_stmts/4,tt_stmts([],_,_,([],[]))).
+logen(tt_stmt/4,tt_stmt(asg(var(D),C),A,(E,F),B)) :-
+    logen(unfold,ee(C,A,(E,F),G)),
+    logen(call,B=([],[(A:D,G)])).
+logen(tt_stmt/4,tt_stmt(asgmem(array(var(E),D),C),A,(F,G),B)) :-
+    logen(unfold,ee(C,A,(F,G),H)),
+    logen(unfold,ee(D,A,(F,G),I)),
+    logen(call,B=([],[(A:array(E,I),H)])).
+logen(tt_stmt/4,tt_stmt(readmem(C,array(var(E),D)),A,(F,G),B)) :-
+    logen(unfold,ee(D,A,(F,G),H)),
+    logen(unfold,getv(G,A:array(E,H),I)),
+    logen(call,B=([],[(A:C,I)])).
+logen(tt_stmt/4,tt_stmt(write(B,C),A,(D,E),([(G:data,F),(G:valid,1)],[]))) :-
+    logen(unfold,getv(D,A:B,G)),
+    logen(unfold,ee(C,A,(D,E),F)).
+logen(tt_stmt/4,tt_stmt(read(B,C),A,(D,_),([(E:ready,0)],[(A:B,F)]))) :-
+    logen(unfold,getv(D,A:C,E)),
+    logen(unfold,getv(D,E:data,F)).
+logen(eg/4,eg(next(B),A,_,([],[(A:state,B)]))).
+logen(eg/4,eg(mux(D,E,F),A,B,C)) :-
+    logen(unfold,ee(D,A,B,G)),
+    logen(unfold,goto_choice(G,E,F,A,B,C)).
+logen(goto_choice/6,goto_choice(1,A,_,B,C,D)) :-
+    logen(unfold,eg(A,B,C,D)).
+logen(goto_choice/6,goto_choice(A,_,B,C,D,E)) :-
+    logen(call,A\==1),
+    logen(unfold,eg(B,C,D,E)).
+logen(ee/4,ee(num(A),_,_,A)).
+logen(ee/4,ee(var(C),A,(_,D),B)) :-
+    logen(unfold,getv(D,A:C,B)).
+logen(ee/4,ee(mux(D,E,F),A,B,C)) :-
+    logen(unfold,ee(D,A,B,G)),
+    logen(unfold,ee_choice(G,E,F,A,B,C)).
+logen(ee/4,ee(A,B,C,D)) :-
+    logen(call,A=..[E,F,G]),
+    logen(unfold,ee(F,B,C,H)),
+    logen(unfold,ee(G,B,C,I)),
+    logen(unfold,binop(E,H,I,D)).
+logen(ee/4,ee(ready(C),A,(D,_),B)) :-
+    logen(unfold,getv(D,A:C,E)),
+    logen(unfold,getv(D,E:ready,F)),
+    logen(unfold,getv(D,E:valid,G)),
+    logen(unfold,ret_ready(F,G,B)).
+logen(ee/4,ee(valid(C),A,(D,_),B)) :-
+    logen(unfold,getv(D,A:C,E)),
+    logen(unfold,getv(D,E:ready,F)),
+    logen(unfold,getv(D,E:valid,G)),
+    logen(unfold,ret_valid(F,G,B)).
+logen(ret_ready/3,ret_ready(1,0,1)).
+logen(ret_ready/3,ret_ready(1,1,0)).
+logen(ret_ready/3,ret_ready(0,0,0)).
+logen(ret_ready/3,ret_ready(0,1,0)).
+logen(ret_valid/3,ret_valid(1,1,1)).
+logen(ret_valid/3,ret_valid(1,0,0)).
+logen(ret_valid/3,ret_valid(0,0,0)).
+logen(ret_valid/3,ret_valid(0,1,0)).
+logen(binop/4,binop(+,A,B,C)) :-
+    logen(rescall,C is A+B).
+logen(binop/4,binop(-,A,B,C)) :-
+    logen(rescall,C is A-B).
+logen(binop/4,binop(*,A,B,C)) :-
+    logen(rescall,C is A*B).
+logen(binop/4,binop(/,A,B,C)) :-
+    logen(rescall,C is A/B).
+logen(binop/4,binop(mod,A,B,C)) :-
+    logen(rescall,C is A mod B).
+logen(binop/4,binop(>=,A,B,C)) :-
+    logen(unfold,gte(A,B,C)).
+logen(binop/4,binop(>,A,B,C)) :-
+    logen(unfold,gt(A,B,C)).
+logen(binop/4,binop(>=,A,B,C)) :-
+    logen(unfold,gte(A,B,C)).
+logen(binop/4,binop(<,A,B,C)) :-
+    logen(unfold,lt(A,B,C)).
+logen(binop/4,binop(=<,A,B,C)) :-
+    logen(unfold,lte(A,B,C)).
+logen(binop/4,binop(==,A,B,C)) :-
+    logen(unfold,eq(A,B,C)).
+logen(binop/4,binop('!=',A,B,C)) :-
+    logen(unfold,neq(A,B,C)).
+logen(binop/4,binop('|',A,B,C)) :-
+    logen(memo,logicalor(A,B,C)).
+logen(binop/4,binop(&,A,B,C)) :-
+    logen(memo,logicaland(A,B,C)).
+logen(gt/3,gt(A,B,1)) :-
+    logen(rescall,A>B).
+logen(gt/3,gt(A,B,0)) :-
+    logen(rescall,A=<B).
+logen(gte/3,gte(A,B,1)) :-
+    logen(rescall,A>=B).
+logen(gte/3,gte(A,B,0)) :-
+    logen(rescall,A<B).
+logen(lt/3,lt(A,B,1)) :-
+    logen(rescall,A<B).
+logen(lt/3,lt(A,B,0)) :-
+    logen(rescall,A>=B).
+logen(lte/3,lte(A,B,1)) :-
+    logen(rescall,A=<B).
+logen(lte/3,lte(A,B,0)) :-
+    logen(rescall,A>B).
+logen(eq/3,eq(A,B,1)) :-
+    logen(rescall,A==B).
+logen(eq/3,eq(A,B,0)) :-
+    logen(rescall,A\==B).
+logen(neq/3,neq(A,B,1)) :-
+    logen(rescall,A\==B).
+logen(neq/3,neq(A,B,0)) :-
+    logen(rescall,A==B).
+logen(logicalor/3,logicalor(0,0,0)).
+logen(logicalor/3,logicalor(1,0,1)).
+logen(logicalor/3,logicalor(0,1,1)).
+logen(logicalor/3,logicalor(1,1,1)).
+logen(logicaland/3,logicaland(0,0,0)).
+logen(logicaland/3,logicaland(1,0,0)).
+logen(logicaland/3,logicaland(0,1,0)).
+logen(logicaland/3,logicaland(1,1,1)).
+logen(ee_choice/6,ee_choice(1,A,_,B,C,D)) :-
+    logen(unfold,ee(A,B,C,D)).
+logen(ee_choice/6,ee_choice(A,_,B,C,D,E)) :-
+    logen(call,A\==1),
+    logen(unfold,ee(B,C,D,E)).
+logen(addenv/3,addenv(A,[],B)) :-
+    logen(unfold,addentries(A,[],B)).
+logen(addenv/3,addenv(A,[(D,E)|C],B)) :-
+    logen(unfold,addentry(D,E,A,F)),
+    logen(unfold,addenv(F,C,B)).
+logen(addenv2/3,addenv2((A,B),(C,D),(E,F))) :-
+    logen(unfold,addenv(A,C,E)),
+    logen(unfold,addenv(B,D,F)).
+logen(addenvs/3,addenvs((A,B),(C,D),(E,F))) :-
+    logen(unfold,addenv(A,C,E)),
+    logen(unfold,addenvlist(B,D,F)).
+logen(addenvlist/3,addenvlist([],[],[])).
+logen(addenvlist/3,addenvlist([A|B],[C|D],[E|F])) :-
+    logen(unfold,addenv(A,C,E)),
+    logen(unfold,addenvlist(B,D,F)).
+logen(addentry/4,addentry(A,B,[],[(A,B)])).
+logen(addentry/4,addentry(A,_,[(A,C)|B],[(A,C)|B])).
+logen(addentry/4,addentry(A,B,[(D,E)|C],[(D,E)|F])) :-
+    logen(call,A@>D),
+    logen(unfold,addentry(A,B,C,F)).
+logen(addentry/4,addentry(A,B,[(D,E)|C],[(A,B),(D,E)|C])) :-
+    logen(call,A@<D).
+logen(addentries/3,addentries([(D,E)|C],A,B)) :-
+    logen(unfold,addentry(D,E,A,F)),
+    logen(unfold,addentries(C,F,B)).
+logen(addentries/3,addentries([],A,A)).
+logen(getv/3,getv([(A,B)|_],A,B)).
+logen(getv/3,getv([(D,_)|C],A,B)) :-
+    logen(call,D\==A),
+    logen(unfold,getv(C,A,B)).
+logen(getstate/3,getstate([B|_],A,B)) :-
+    logen(call,B=state(A,_,_,_)).
+logen(getstate/3,getstate([state(D,_,_,_)|C],A,B)) :-
+    logen(call,D\==A),
+    logen(unfold,getstate(C,A,B)).
+logen(getMod/3,getMod(A,[B|_],B)) :-
+    logen(call,B=module(var(A),_,_)).
+logen(getMod/3,getMod(A,[C|D],B)) :-
+    logen(call,C=module(var(E),_,_)),
+    logen(call,E\==A),
+    logen(unfold,getMod(A,D,B)).
+logen(env_skeleton/2,env_skeleton((A,B),(C,D))) :-
+    logen(unfold,store_skel(A,C)),
+    logen(unfold,storelist_skel(B,D)).
+logen(storelist_skel/2,storelist_skel([],[])).
+logen(storelist_skel/2,storelist_skel([A|B],[C|D])) :-
+    logen(unfold,store_skel(A,C)),
+    logen(unfold,storelist_skel(B,D)).
+logen(store_skel/2,store_skel([],[])).
+logen(store_skel/2,store_skel([(B,_)|A],[(B,_)|C])) :-
+    logen(unfold,store_skel(A,C)).
+logen(store_skel_undef/2,store_skel_undef([],[])).
+logen(store_skel_undef/2,store_skel_undef([(B,_)|A],[(B,undef)|C])) :-
+    logen(unfold,store_skel_undef(A,C)).
+logen(menv_skel/2,menv_skel((A,B),(C,D))) :-
+    logen(unfold,store_skel(A,C)),
+    logen(unfold,store_skel(B,D)).
+logen(writeenv/2,writeenv(A,(B,C))) :-
+    logen(rescall,write(====================)),
+    logen(rescall,nl),
+    logen(rescall,write(A)),
+    logen(rescall,write(': ')),
+    logen(rescall,nl),
+    logen(rescall,write(B)),
+    logen(rescall,nl),
+    logen(rescall,write(C)),
+    logen(rescall,nl).
+    
+    
+:- type
+        store--->type(list(struct(',',[static,dynamic]))).
+:- type
+        storelist--->type(list(type(store))). 
+:- type
+        env--->struct(',',[type(store),type(storelist)]).
+:- type
+        menv--->struct(',',[type(store),type(store)]).
+        
+:- filter
+    chisel(static,dynamic).
+:- filter
+    iterate(static,dynamic,dynamic,type(env)).
+
+:- filter
+    t_mod(static,static,type(store),type(menv),type(menv)).
+:- filter
+    set_chan(dynamic,dynamic,dynamic,type(store)).
+:- filter
+    writeenv(dynamic,dynamic).
+:- filter
+	logicaland(dynamic,dynamic,dynamic).
+:- filter
+	logicalor(dynamic,dynamic,dynamic).
+
+
+
