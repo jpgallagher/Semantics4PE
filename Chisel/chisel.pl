@@ -171,7 +171,6 @@ goto_choice(V,_,G2,M,Env,Env1) :-
 	V\==1,
 	eg(G2,M,Env,Env1).
 	
-
 % Expression evaluation
 
 ee(num(N),_,_,N).
@@ -295,15 +294,6 @@ addenv2((C1,E1),(C2,E2),(C3,E3)) :-
 	addenv(C1,C2,C3),
 	addenv(E1,E2,E3).
 	
-addenvs((C1,E1),(C2,E2),(C3,E3)) :-
-	addenv(C1,C2,C3),
-	addenvlist(E1,E2,E3).
-	
-addenvlist([],[],[]). % to ensure sorted result
-addenvlist([E1|Es1],[E2|Es2],[E3|Es3]) :-
-	addenv(E1,E2,E3),
-	addenvlist(Es1,Es2,Es3).
-	
 addentry(X,V,[],[(X,V)]).
 addentry(X,_,[(X,W)|Env],[(X,W)|Env]).
 addentry(X,V,[(Y,W)|Env],[(Y,W)|Env1]) :-
@@ -322,6 +312,7 @@ getv([(Y,_)|Env],X,V) :-
 	Y\==X,
 	getv(Env,X,V).
 	
+
 getstate([State|_Ss],N,State) :-
 	State=state(N,_,_,_).
 getstate([state(M,_,_,_)|Ss],N,State) :-
@@ -347,14 +338,6 @@ storelist_skel([E|Es],[E1|Es1]) :-
 store_skel([],[]).
 store_skel([(X,_)|E1],[(X,_)|E2]) :-
 	store_skel(E1,E2).
-	
-store_skel_undef([],[]).
-store_skel_undef([(X,_)|E1],[(X,undef)|E2]) :-
-	store_skel_undef(E1,E2).
-	
-menv_skel((C,M),(C1,M1)) :-
-	store_skel(C,C1),
-	store_skel(M,M1).
 	
 writeenv(J,(CEnv,MEnv)) :-
 	write('===================='),nl,
