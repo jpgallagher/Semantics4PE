@@ -1,0 +1,16 @@
+design( 
+	[val(var('random'),
+	var('Random'))], 
+	[],
+	[module(var('Random'),
+		[vardecl(int,var('x'),num(0)),
+		vardecl(int,var('i'),num(0)),
+		arraydecl(int,11,var('a'))],
+		[state(1,num(1),[asg(var('i'),num(0))],next(2)), 
+		state(2,num(1),[asg(var('x'),(num(83) * var('i')) + num(52))],next(3)), 
+		state(3,num(1),[asg(var('x'),var('x')  mod num(101))],next(4)), 
+		state(4,num(1),[asgmem(array(var(a),var('i')),var('x')), 
+						asg(var('i'),var('i') + num(1))],
+						mux(var('i') < num(10),next(2),next(5))), 
+		state(5,num(1),[],next(5))])] 
+	).

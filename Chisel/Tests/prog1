@@ -1,0 +1,14 @@
+design( 
+	[val(var('prog'),var('Prog'))] , 
+	[] ,
+	[module(var('Prog'),
+		[vardecl(int,var('i'),num(0)),
+		vardecl(int,var('j'),num(0)),
+		vardecl(int,var('k'),num(0))],
+	[state(1,num(1),[asg(var('i'),num(15)),
+					asg(var('j'),num(1))],next(2)), 
+	state(2,num(1),[asg(var('i'),var('i') - num(1)), 
+					asg(var('j'),var('j') + num(1))],next(3)),
+	state(3,num(1),[],mux(var('i') > var('j'),next(2),next(4))),
+	state(4,num(1),[asg(var('k'),num(1))],next(4))])] 
+).

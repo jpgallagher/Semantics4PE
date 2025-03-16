@@ -1,0 +1,27 @@
+design( 
+	[val(var('sender'),var('Sender')),
+	val(var('receiver'),var('Receiver'))], 
+	[conn(var(sender),var(out),var(receiver),var(in))],
+	[module(var('Sender'),
+		[vardecl(int,var('i'),num(0)),
+		outdecl(out)],
+		[state(1,num(1),
+			[asg(var('i'),num(0))],next(2)),
+		state(2,ready(out),
+			[write(out,var('i')), 
+			asg(var('i'),var('i') + num(1))],
+				mux(var('i') < num(5),next(2),next(3))),
+		state(3,num(1),[],next(3))]),
+	module(var('Receiver'),
+		[vardecl(int,var('x'),num(0)),
+		vardecl(int,var('j'),num(0)),
+		indecl(in)],
+		
+		[state(1,num(1),
+			[asg(var('j'),num(0))],next(2)),
+		state(2,valid(in),
+			[read(x,in)],next(3)),
+		state(3,num(1),[asg(var('j'),var('j') + var('x'))],
+			mux(var('x') < num(5),next(2),next(4))), 
+		state(4,num(1),[],next(4))])] 
+	).
