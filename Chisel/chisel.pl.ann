@@ -282,17 +282,17 @@ logen(writeenv/2,writeenv(A,(B,C))) :-
     logen(rescall,write(C)),
     logen(rescall,nl).
 logen(test/0,test) :-
-    logen(memo,chisel(prog,5)).
+    logen(memo,chisel('Tests/prog',5)).
 logen(test1/0,test1) :-
-    logen(memo,chisel(prog1,17)).
+    logen(memo,chisel('Tests/prog1',17)).
 logen(test6/0,test6) :-
-    logen(memo,chisel(prog6,46)).
+    logen(memo,chisel('Tests/prog6',46)).
 logen(test7/0,test7) :-
-    logen(memo,chisel(prog7,35)).
+    logen(memo,chisel('Tests/prog7',35)).
 logen(test8/0,test8) :-
     logen(memo,chisel('Tests/prog8',20)).
 logen(test9/0,test9) :-
-    logen(memo,chisel(prog9,21)).
+    logen(memo,chisel('Tests/prog9',21)).
     
     
 :- type
