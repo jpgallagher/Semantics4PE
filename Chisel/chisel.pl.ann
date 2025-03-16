@@ -11,7 +11,7 @@ logen(iterate/4,iterate(_,A,B,_)) :-
     logen(rescall,A>=B).
 logen(iterate/4,iterate(design(C,D,E),A,B,(F,G))) :-
     logen(rescall,A<B),
-    %logen(memo,writeenv(A,(F,G))),
+    logen(memo,writeenv(A,(F,G))),
     logen(unfold,env_skeleton((F,G),(H,I))),
     logen(unfold,tt(design(C,D,E),(F,G),(H,I))),
     logen(rescall,J is A+1),
@@ -271,12 +271,6 @@ logen(storelist_skel/2,storelist_skel([A|B],[C|D])) :-
 logen(store_skel/2,store_skel([],[])).
 logen(store_skel/2,store_skel([(B,_)|A],[(B,_)|C])) :-
     logen(unfold,store_skel(A,C)).
-logen(store_skel_undef/2,store_skel_undef([],[])).
-logen(store_skel_undef/2,store_skel_undef([(B,_)|A],[(B,undef)|C])) :-
-    logen(unfold,store_skel_undef(A,C)).
-logen(menv_skel/2,menv_skel((A,B),(C,D))) :-
-    logen(unfold,store_skel(A,C)),
-    logen(unfold,store_skel(B,D)).
 logen(writeenv/2,writeenv(A,(B,C))) :-
     logen(rescall,write(====================)),
     logen(rescall,nl),
@@ -287,6 +281,18 @@ logen(writeenv/2,writeenv(A,(B,C))) :-
     logen(rescall,nl),
     logen(rescall,write(C)),
     logen(rescall,nl).
+logen(test/0,test) :-
+    logen(memo,chisel(prog,5)).
+logen(test1/0,test1) :-
+    logen(memo,chisel(prog1,17)).
+logen(test6/0,test6) :-
+    logen(memo,chisel(prog6,46)).
+logen(test7/0,test7) :-
+    logen(memo,chisel(prog7,35)).
+logen(test8/0,test8) :-
+    logen(memo,chisel('Tests/prog8',20)).
+logen(test9/0,test9) :-
+    logen(memo,chisel(prog9,21)).
     
     
 :- type
@@ -318,5 +324,16 @@ logen(writeenv/2,writeenv(A,(B,C))) :-
 :- filter
 	ret_valid(dynamic,dynamic,dynamic).
 
-
+:- filter
+    test.
+:- filter
+    test1.
+:- filter
+    test6.
+:- filter
+    test7.
+:- filter
+    test8.
+:- filter
+    test9.
 

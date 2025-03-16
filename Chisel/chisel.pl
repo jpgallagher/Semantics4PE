@@ -14,12 +14,9 @@ chisel(File,Max) :-
 	close(S),
 	interpreter(D,Max).
 		
-
 interpreter(Design,Max) :-
 	init(Design,Env0),
 	iterate(Design,0,Max,Env0).
-	
-
 	
 iterate(_,J,Max,_Env) :-
 	J>=Max.
@@ -348,150 +345,16 @@ writeenv(J,(CEnv,MEnv)) :-
 % Tests
 
 test :-
-	prog(D),
-	interpreter(D,5).
+	chisel(prog,5).
 test1 :-
-	prog1(D),
-	interpreter(D,17).
+	chisel(prog1,17).
 test6 :-
-	prog6(D),
-	interpreter(D,46).
+	chisel(prog6,46).
 test7 :-
-	prog7(D),
-	interpreter(D,35).
+	chisel(prog7,35).
 test8 :-
-	prog8(D),
-	interpreter(D,20).
+	chisel('Tests/prog8',20).
 test9 :-
-	prog9(D),
-	interpreter(D,21).
+	chisel(prog9,21).
 	
-prog(
-  design(
-     [val(var('random'),var('Random'))],
-    [],
-    [module(var('Random'),
-       [vardecl(int,var('x'),num(0)), vardecl(int,var('i'),num(0)), 
-       	arraydecl(int,11,var('a'))],
-    [state(1,num(1),[asg(var('i'),num(0))],next(2)), 
-     state(2,num(1),[asg(var('x'),(num(83) * var('i')) + num(52))],next(3)), 
-     state(3,num(1),[asg(var('x'),var('x')  mod  num(101))],next(4)), 
-     state(4,num(1),[asgmem(array(var(a),var('i')), var('x')),
-      				 asg(var('i'),var('i') + num(1))],
-      				 mux(var('i') < num(10),next(2),next(5))), 
-     state(5,num(1),[],next(5))])]
- )      			
-).
 
-prog9(design( 
-	[val(var('range'),var('Range'))], 
-	[],
-	[module(var('Range'),
-		[vardecl(int,var('x'),num(0)),
-		vardecl(int,var('i'),num(0)), 
-		vardecl(int,var('j'),num(0)),
-		arraydecl(int,6,var('a'))],
-	[state(1,num(1),
-		[asg(var('i'),num(0)),
-		asg(var('j'),num(0)), 
-		asg(var('x'),num(0))],next(2)),
-	state(2,num(1),
-		[asgmem(array(var(a),var('i')), var('i')),
-		asg(var('i'),var('i') + num(1))],
-			mux(var('i') < num(5),next(2),next(3))), 
-	state(3,num(1),
-		[asg(var('i'),var('i') - num(1))],next(4)), 
-	state(4,num(1),
-		[readmem(x,array(var(a),var('i'))),
-		asg(var('i'),var('i') - num(1))],mux(var('i') > num(0),next(5),next(6))), 
-		state(5,num(1),[asg(var('j'),var('j') + var('x'))],next(4)),
-		state(6,num(1),[],next(6))])] 
-	) 
-).
-
-
-prog8(design( 
-	[val(var('sender'),var('Sender')),
-	val(var('receiver'),var('Receiver'))], 
-	[conn(var(sender),var(out),var(receiver),var(in))],
-	[module(var('Sender'),
-		[vardecl(int,var('i'),num(0)),
-		outdecl(out)],
-		[state(1,num(1),
-			[asg(var('i'),num(0))],next(2)),
-		state(2,ready(out),
-			[write(out,var('i')), 
-			asg(var('i'),var('i') + num(1))],
-				mux(var('i') < num(5),next(2),next(3))),
-		state(3,num(1),[],next(3))]),
-	module(var('Receiver'),
-		[vardecl(int,var('x'),num(0)),
-		vardecl(int,var('j'),num(0)),
-		indecl(in)],
-		
-		[state(1,num(1),
-			[asg(var('j'),num(0))],next(2)),
-		state(2,valid(in),
-			[read(x,in)],next(3)),
-		state(3,num(1),[asg(var('j'),var('j') + var('x'))],
-			mux(var('x') < num(5),next(2),next(4))), 
-		state(4,num(1),[],next(4))])] 
-	) 
-).
-
-prog7(design( 
-	[val(var('random'),
-	var('Random'))], 
-	[],
-	[module(var('Random'),
-		[vardecl(int,var('x'),num(0)),
-		vardecl(int,var('i'),num(0)),
-		arraydecl(int,11,var('a'))],
-		[state(1,num(1),[asg(var('i'),num(0))],next(2)), 
-		state(2,num(1),[asg(var('x'),(num(83) * var('i')) + num(52))],next(3)), 
-		state(3,num(1),[asg(var('x'),var('x')  mod num(101))],next(4)), 
-		state(4,num(1),[asgmem(array(var(a),var('i')),var('x')), 
-						asg(var('i'),var('i') + num(1))],
-						mux(var('i') < num(10),next(2),next(5))), 
-		state(5,num(1),[],next(5))])] )
-).
-
-prog6(design( 
-	[val(var('random'),
-	var('Random6'))] , 
-	[] ,
-	[module(var('Random6'),
-		[vardecl(int,var('x'),num(0)),
-		vardecl(int,var('i'),num(0)), 
-		vardecl(int,var('k'),num(0)),
-		vardecl(int,var('r'),num(0)),
-		arraydecl(int,11,var('a'))],
-	[state(1,num(1),[asg(var('i'),num(0))],next(2)), 
-	state(2,num(1),[asg(var('x'),(num(83) * var('i')) + num(52))],next(3)), 
-	state(3,num(1),[asg(var('x'),var('x')  mod num(101))],next(4)),
-	state(4,num(1),[asgmem(array(var(a),var('i')),var('x')), 
-					asg(var('i'),var('i') + num(1))],
-					    mux(var('i')<num(10),next(2),next(5))), 
-	state(5,num(1),[asg(var('i'),num(1)),
-					readmem(r,array(var(a),num(0)))],next(6)),
-	state(6,num(1),[asg(var('k'),var('k') + var('r')),
-					readmem(r,array(var(a),var('i'))), asg(var('i'),var('i') +num(1))],
-						mux(var('i') < num(10),next(6),next(7))),
-	state(7,num(1),[],next(7))])] ) 
-).
-
-prog1(design( 
-	[val(var('prog'),var('Prog'))] , 
-	[] ,
-	[module(var('Prog'),
-		[vardecl(int,var('i'),num(0)),
-		vardecl(int,var('j'),num(0)),
-		vardecl(int,var('k'),num(0))],
-	[state(1,num(1),[asg(var('i'),num(15)),
-					asg(var('j'),num(1))],next(2)), 
-	state(2,num(1),[asg(var('i'),var('i') - num(1)), 
-					asg(var('j'),var('j') + num(1))],next(3)),
-	state(3,num(1),[],mux(var('i') > var('j'),next(2),next(4))),
-	state(4,num(1),[asg(var('k'),num(1))],next(4))])] ) 
-).
-	
