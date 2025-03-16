@@ -345,16 +345,16 @@ writeenv(J,(CEnv,MEnv)) :-
 % Tests
 
 test :-
-	chisel(prog,5).
+	chisel('Tests/prog',5).
 test1 :-
-	chisel(prog1,17).
+	chisel('Tests/prog1',17).
 test6 :-
-	chisel(prog6,46).
+	chisel('Tests/prog6',46).
 test7 :-
-	chisel(prog7,35).
+	chisel('Tests/prog7',35).
 test8 :-
 	chisel('Tests/prog8',20).
 test9 :-
-	chisel(prog9,21).
+	chisel('Tests/prog9',21).
 	
 
