@@ -12,7 +12,6 @@ logen(iterate/4,iterate(_,A,B,_)) :-
 logen(iterate/4,iterate(design(C,D,E),A,B,(F,G))) :-
     logen(rescall,A<B),
     logen(memo,writeenv(A,(F,G))),
-    logen(unfold,env_skeleton((F,G),(H,I))),
     logen(unfold,tt(design(C,D,E),(F,G),(H,I))),
     logen(rescall,J is A+1),
     logen(memo,iterate(design(C,D,E),J,B,(H,I))).
@@ -66,10 +65,8 @@ logen(reset_chans/3,reset_chans([],_,[])).
 logen(set_chan/4,set_chan(0,A,_,[(A:ready,1),(A:valid,0)])).
 logen(set_chan/4,set_chan(1,A,B,[(A:ready,1),(A:valid,B)])).
 logen(tt/3,tt(design(A,B,C),(D,E),(F,G))) :-
-    logen(unfold,storelist_skel(E,G)),
     logen(unfold,reset_chans(B,D,H)),
     logen(unfold,addenv(H,D,I)),
-    logen(unfold,store_skel(I,F)),
     logen(unfold,td(A,C,I,(D,E),(F,G))).
 logen(td/5,td([val(var(D),var(E))|C],A,B,(F,[G|H]),(I,[J|K]))) :-
     logen(unfold,getMod(E,A,L)),
@@ -261,13 +258,6 @@ logen(getMod/3,getMod(A,[C|D],B)) :-
     logen(call,C=module(var(E),_,_)),
     logen(call,E\==A),
     logen(unfold,getMod(A,D,B)).
-logen(env_skeleton/2,env_skeleton((A,B),(C,D))) :-
-    logen(unfold,store_skel(A,C)),
-    logen(unfold,storelist_skel(B,D)).
-logen(storelist_skel/2,storelist_skel([],[])).
-logen(storelist_skel/2,storelist_skel([A|B],[C|D])) :-
-    logen(unfold,store_skel(A,C)),
-    logen(unfold,storelist_skel(B,D)).
 logen(store_skel/2,store_skel([],[])).
 logen(store_skel/2,store_skel([(B,_)|A],[(B,_)|C])) :-
     logen(unfold,store_skel(A,C)).

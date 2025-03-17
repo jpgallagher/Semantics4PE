@@ -23,7 +23,6 @@ iterate(_,J,Max,_Env) :-
 iterate(design(Mods,Conns,MDcls),J,Max,(CEnv0,MEnvs0)) :-
 	J<Max,
 	writeenv(J,(CEnv0,MEnvs0)),
-	env_skeleton((CEnv0,MEnvs0),(CEnv1,MEnvs1)),
 	tt(design(Mods,Conns,MDcls),(CEnv0,MEnvs0),(CEnv1,MEnvs1)),
 	J1 is J+1,
 	iterate(design(Mods,Conns,MDcls),J1,Max,(CEnv1,MEnvs1)).
@@ -96,10 +95,8 @@ set_chan(1,I,V,[(I:ready,1),(I:valid,V)]).
 % State transitions
 
 tt(design(Mods,Conns,MDcls),(CEnv0,Env0),(CEnv1,Env1)) :-
-	storelist_skel(Env0,Env1),
 	reset_chans(Conns,CEnv0,CEnv2),
 	addenv(CEnv2,CEnv0,CEnvR),	% CEnvR = env with channels reset
-	store_skel(CEnvR,CEnv1),
 	td(Mods,MDcls,CEnvR,(CEnv0,Env0),(CEnv1,Env1)).
 	
 td([val(var(MVal),var(M))|MDcls],Mods,CEnvR,(CEnv0,[M0|Envs0]),(CEnv2,[M1|Envs1])) :-
