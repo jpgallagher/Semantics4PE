@@ -20,12 +20,12 @@ interpreter(Design,Max) :-
 	
 iterate(_,J,Max,_Env) :-
 	J>=Max.
-iterate(design(Mods,Conns,MDcls),J,Max,(CEnv0,MEnvs0)) :-
+iterate(design(Mods,Conns,MDcls),J,Max,Env0) :-
 	J<Max,
-	writeenv(J,(CEnv0,MEnvs0)),
-	tt(design(Mods,Conns,MDcls),(CEnv0,MEnvs0),(CEnv1,MEnvs1)),
+	writeenv(J,Env0),
+	tt(design(Mods,Conns,MDcls),Env0,Env1),
 	J1 is J+1,
-	iterate(design(Mods,Conns,MDcls),J1,Max,(CEnv1,MEnvs1)).
+	iterate(design(Mods,Conns,MDcls),J1,Max,Env1).
 	
 % Initialisation
 
@@ -319,15 +319,6 @@ getMod(M,[Mod1|Mods],Mod) :-
 	Mod1=module(var(M1),_,_),
 	M1 \== M,
 	getMod(M,Mods,Mod).
-	
-env_skeleton((C,Es),(C1,Es1)) :-
-	store_skel(C,C1),
-	storelist_skel(Es,Es1).
-	
-storelist_skel([],[]).
-storelist_skel([E|Es],[E1|Es1]) :-
-	store_skel(E,E1),
-	storelist_skel(Es,Es1).
 		
 store_skel([],[]).
 store_skel([(X,_)|E1],[(X,_)|E2]) :-
