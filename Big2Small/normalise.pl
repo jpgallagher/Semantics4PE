@@ -6,6 +6,7 @@
 :- use_module(chclibs(common)).
 :- use_module(chclibs(canonical)).
 
+% Transform big-step rules to have at most two premises
 
 main([F,FOut]) :-
 	normalise(F,Rs),
