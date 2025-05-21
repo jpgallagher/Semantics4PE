@@ -1,0 +1,72 @@
+:- module(transformExpr,_).
+ 	
+% Regular expressions over alphabet {asg(X,Expr),true(Expr), false(Expr)}
+% where X is a variable, E an expression
+%
+% E ::= asg(X,Expr) | true(Expr) | false(Expr) | E1:E2 | E1+E2 | star(E) | null | eps
+%
+% Transform by replacing star(A+B) by star(A):star(B:star(A))
+	
+transformRegExpr(eps,eps).
+transformRegExpr(E,E) :-
+	literal(E).
+transformRegExpr(E1:E2,E11:E21) :-
+	transformRegExpr(E1,E11),
+	transformRegExpr(E2,E21).
+transformRegExpr(E1+E2,E11+E21) :-
+	transformRegExpr(E1,E11),
+	transformRegExpr(E2,E21).
+transformRegExpr(star(E),E2) :-
+	dnfRegExpr(E,E1),
+	transformStar(star(E1),E2).
+	
+transformStar(star(E),star(E)) :-
+	singlePath(E).
+transformStar(star(E1+E2),E3:star(E1:E3)) :-
+	transformStar(star(E2),E3).
+	
+dnfRegExpr(E,E) :-
+	pathLiteral(E).
+dnfRegExpr(E1+E2, E1+E3) :-
+	literal(E1),
+	dnfRegExpr(E2,E3).
+dnfRegExpr((E1+E2)+E3, DNF) :-
+	dnfRegExpr(E1+(E2+E3), DNF).
+dnfRegExpr((E1:E2)+E3, DNF) :-
+	dnfRegExpr(E1:E2, DNF1),
+	dnfRegExpr(E3, DNF2),
+	appendDisj(DNF1,DNF2,DNF).
+dnfRegExpr((E1:E2), E4) :-
+	pathLiteral(E1),
+	dnfRegExpr(E2,E3),
+	distribute(E1,E3,E4).
+dnfRegExpr(((E1:E2):E3), DNF) :-
+	dnfRegExpr((E1:(E2:E3)), DNF).
+dnfRegExpr((E1+E2):E3, DNF) :-
+	dnfRegExpr(E1:E3, DNF1),
+	dnfRegExpr(E2:E3, DNF2),
+	appendDisj(DNF1,DNF2,DNF).
+	
+distribute(E1,(E2+E3),(E1:E2)+E4) :-
+	distribute(E1,E3,E4).
+distribute(E1,E2,E1:E2) :-
+	singlePath(E2).
+	
+appendDisj(E1+E2,E3,E1+E4) :-
+	appendDisj(E2,E3,E4).
+appendDisj(E1,E2,E1+E2) :-
+	singlePath(E1).
+	
+literal(asg(_,_)).
+literal(true(_)).
+literal(false(_)).
+
+
+pathLiteral(E) :-
+	literal(E).
+pathLiteral(star(_)).	% star within a loop path treated as a literal
+
+singlePath(E) :-
+	pathLiteral(E).
+singlePath(_:_). 	% assuming the argument is in DNF
+ 
