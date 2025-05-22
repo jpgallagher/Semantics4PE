@@ -13,7 +13,6 @@ main(ArgV) :-
     set_options(Options,File,Style,LR,YN),
     go(File,Style,LR,YN).
     
-
 go(File,Style,LR,YN) :-
     open(File,read,S), 	% Read the AST of the parsed program
     read(S,P),
@@ -25,35 +24,33 @@ go(File,Style,LR,YN) :-
     exec(Expr,Style,LR,YN,St).
     
 exec(Expr,big,right,no,St) :-
-	bigstep(Expr,St,St1),
+	bigstep(Expr,right,St,St1),
 	write(St1),
 	nl.
-exec(Expr,small,right,no,St) :-
+exec(Expr,small,right,no,St) :-	% Ignore left/right with smallstep - what does it mean?
 	run(Expr,St).
-exec(_Expr,big,left,no,_St) :-
-	write('Not yet implemented. '),
-	write((big,left,no)),
+exec(Expr,big,left,no,St) :-
+	bigstep(Expr,left,St,St1),
+	write(St1),
 	nl.
-exec(_Expr,small,left,no,_St) :-
-	write('Not yet implemented. '),
-	write((small,left,no)),
-	nl.
+exec(Expr,small,left,no,St) :-
+	run(Expr,St).
 exec(Expr,big,right,yes,St) :-
 	transformRegExpr(Expr,TExpr),
-	bigstep(TExpr,St,St1),
+	bigstep(TExpr,right,St,St1),
 	write(St1),
 	nl.
 exec(Expr,small,right,yes,St) :-
 	transformRegExpr(Expr,TExpr),
 	run(TExpr,St).
-exec(_Expr,big,left,yes,_St) :-
-	write('Not yet implemented. '),
-	write((big,left,yes)),
+exec(Expr,big,left,yes,St) :-
+	transformRegExpr(Expr,TExpr),
+	bigstep(TExpr,left,St,St1),
+	write(St1),
 	nl.
-exec(_Expr,small,left,yes,_St) :-
-	write('Not yet implemented. '),
-	write((small,left,yes)),
-	nl.
+exec(Expr,small,left,yes,St) :-
+	transformRegExpr(Expr,TExpr),
+	run(TExpr,St).		
 	
 
 vardecls([],[]).
@@ -73,28 +70,31 @@ initDeclVal(null,_).
 % E ::= asg(var(X),Expr) | true(Expr) | false(Expr) | E1:E2 | E1+E2 | star(E) | null | eps
 
 
-% Big-step interpretation wrt a regular expression
+% Big-step interpretation wrt a regular expression and left/right recursion
 
-bigstep(eps,St,St).
-bigstep(asg(var(X),E),St0,St1) :-
+bigstep(eps,_,St,St).
+bigstep(asg(var(X),E),_,St0,St1) :-
 	evalAndSave(X,E,St0,St1).
-bigstep(true(E),St,St) :-
+bigstep(true(E),_,St,St) :-
 	evaltrue(E,St).
-bigstep(false(E),St,St) :-
+bigstep(false(E),_,St,St) :-
 	evalfalse(E,St).
-bigstep(E1:E2,St0,St2) :-
-	bigstep(E1,St0,St1),
-	bigstep(E2,St1,St2).
-bigstep(E1+_,St0,St1) :-
-	bigstep(E1,St0,St1).
-bigstep(_+E2,St0,St1) :-
-	bigstep(E2,St0,St1).
-bigstep(star(_),St,St).
-bigstep(star(E),St0,St1) :-		% Right recursive interpretation
-	bigstep(E:star(E),St0,St1).
+bigstep(E1:E2,LR,St0,St2) :-
+	bigstep(E1,LR,St0,St1),
+	bigstep(E2,LR,St1,St2).
+bigstep(E1+_,LR,St0,St1) :-
+	bigstep(E1,LR,St0,St1).
+bigstep(_+E2,LR,St0,St1) :-
+	bigstep(E2,LR,St0,St1).
+bigstep(star(_),_,St,St).
+bigstep(star(E),right,St0,St1) :-		% Right recursive interpretation
+	bigstep(E:star(E),right,St0,St1).
+bigstep(star(E),left,St0,St1) :-		% Left recursive interpretation
+	bigstep(star(E):E,left,St0,St1).
 	
 
-% Small-step interpretation wrt a regular expression
+% Small-step interpretation wrt a regular expression 
+% Ignore left/right with small-step - unclear what it means
 
 run(eps,St) :-
 	haltState(St).
@@ -119,6 +119,7 @@ step(_Expr1+Expr2,Expr21,St0,St1) :-
 step(star(_Expr),eps,St0,St0).
 step(star(Expr),Expr1:star(Expr),St0,St1) :-		% Right recursive interpretation
 	step(Expr,Expr1,St0,St1).
+
 	
 haltState(St) :-
 	write(St),
