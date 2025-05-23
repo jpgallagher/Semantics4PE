@@ -146,17 +146,6 @@ logicalAnd(0,V1,V2) :-
 negate(1,0).
 negate(0,1).
 
-def(P,[function(Q,Params,S)|_],Params,S) :-
-	P==Q.
-def(P,[function(Q,_,_)|Env],Params,S) :-
-	P\==Q,
-	def(P,Env,Params,S).
-def(P,[T|Env],Params,S) :-
-	functor(T,F,N),
-	F/N \== function/3,
-	def(P,Env,Params,S).
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 % initial setup and entry
@@ -165,7 +154,7 @@ def(P,[T|Env],Params,S) :-
 go :-
 	program(P),
 	vardecls(P,St),			% Top level variable declarations
-	def(main,P,[],S),
+	member(function(main,[],S),P),
 	run(S,St).  % Run main in the global environment
 	
 

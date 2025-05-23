@@ -24,12 +24,14 @@ go(File,Style,LR,YN) :-
     exec(Expr,Style,LR,YN,St).
     
 exec(Expr,big,right,no,St) :-
+	copyStateSkeleton(St,St1),
 	bigstep(Expr,right,St,St1),
 	write(St1),
 	nl.
-exec(Expr,small,right,no,St) :-	% Ignore left/right with smallstep - what does it mean?
+exec(Expr,small,right,no,St) :-	
 	run(Expr,St).
 exec(Expr,big,left,no,St) :-
+	copyStateSkeleton(St,St1),
 	bigstep(Expr,left,St,St1),
 	write(St1),
 	nl.
@@ -37,6 +39,7 @@ exec(Expr,small,left,no,St) :-
 	run(Expr,St).
 exec(Expr,big,right,yes,St) :-
 	transformRegExpr(Expr,TExpr),
+	copyStateSkeleton(St,St1),
 	bigstep(TExpr,right,St,St1),
 	write(St1),
 	nl.
@@ -45,6 +48,7 @@ exec(Expr,small,right,yes,St) :-
 	run(TExpr,St).
 exec(Expr,big,left,yes,St) :-
 	transformRegExpr(Expr,TExpr),
+	copyStateSkeleton(St,St1),
 	bigstep(TExpr,left,St,St1),
 	write(St1),
 	nl.
@@ -80,6 +84,7 @@ bigstep(true(E),_,St,St) :-
 bigstep(false(E),_,St,St) :-
 	evalfalse(E,St).
 bigstep(E1:E2,LR,St0,St2) :-
+	copyStateSkeleton(St0,St1),
 	bigstep(E1,LR,St0,St1),
 	bigstep(E2,LR,St1,St2).
 bigstep(E1+_,LR,St0,St1) :-
@@ -237,6 +242,9 @@ logicalAnd(0,V1,V2) :-
 negate(1,0).
 negate(0,1).
 
+copyStateSkeleton([],[]).
+copyStateSkeleton([(X,_)|St],[(X,_)|St1]) :-
+	copyStateSkeleton(St,St1).
 
 % Getting and setting options
 
