@@ -1,0 +1,233 @@
+:-module(while,_).
+:-use_module(while_reg).
+:-use_module(transformExpr).
+logen(main/1,main(A)) :-
+    logen(unfold,get_options(A,B,_)),
+    logen(unfold,set_options(B,C,D,E,F)),
+    logen(unfold,go(C,D,E,F)).
+logen(go/4,go(A,B,C,D)) :-
+    logen(call,open(A,read,E)),
+    logen(call,read(E,F)),
+    logen(call,close(E)),
+    logen(call,F=logen(program/1,program(G))),
+    logen(unfold,vardecls(G,H)),
+    logen(call,member(function(main,[],I),G)),
+    logen(call,regexp(I,J)),
+    logen(memo,exec(J,B,C,D,H)).
+logen(exec/5,exec(A,big,right,no,B)) :-
+    logen(memo,bigstep(A,right,B,C)),
+    logen(rescall,write(C)),
+    logen(rescall,nl).
+logen(exec/5,exec(A,small,right,no,B)) :-
+    logen(memo,run(A,B)).
+logen(exec/5,exec(A,big,right,no,B)) :-
+    logen(unfold,copyStateSkeleton(B,C)),
+    logen(memo,bigstep(A,right,B,C)),
+    logen(rescall,write(C)),
+    logen(rescall,nl).
+logen(exec/5,exec(A,small,right,no,B)) :-
+    logen(memo,run(A,B)).
+logen(exec/5,exec(A,big,left,no,B)) :-
+    logen(unfold,copyStateSkeleton(B,C)),
+    logen(memo,bigstep(A,left,B,C)),
+    logen(rescall,write(C)),
+    logen(rescall,nl).
+logen(exec/5,exec(A,small,left,no,B)) :-
+    logen(memo,run(A,B)).
+logen(exec/5,exec(A,big,right,yes,B)) :-
+    logen(call,transformRegExpr(A,C)),
+    logen(unfold,copyStateSkeleton(B,D)),
+    logen(memo,bigstep(C,right,B,D)),
+    logen(rescall,write(D)),
+    logen(rescall,nl).
+logen(exec/5,exec(A,small,right,yes,B)) :-
+    logen(call,transformRegExpr(A,C)),
+    logen(memo,run(C,B)).
+logen(exec/5,exec(A,big,left,yes,B)) :-
+    logen(call,transformRegExpr(A,C)),
+    logen(unfold,copyStateSkeleton(B,D)),
+    logen(memo,bigstep(C,left,B,D)),
+    logen(rescall,write(D)),
+    logen(rescall,nl).
+logen(exec/5,exec(A,small,left,yes,B)) :-
+    logen(call,transformRegExpr(A,C)),
+    logen(memo,run(C,B)).
+logen(vardecls/2,vardecls([],[])).
+logen(vardecls/2,vardecls([[vardecl(var(C),_,B)]|A],[(C,E)|D])) :-
+    logen(unfold,initDeclVal(B,E)),
+    logen(unfold,vardecls(A,D)).
+logen(vardecls/2,vardecls([B|C],A)) :-
+    logen(call,B\=[vardecl(_,_,_)]),
+    logen(unfold,vardecls(C,A)).
+logen(initDeclVal/2,initDeclVal(cns(nat(A)),A)).
+logen(initDeclVal/2,initDeclVal(null,_)).
+logen(bigstep/4,bigstep(eps,_,A,A)).
+logen(bigstep/4,bigstep(asg(var(D),C),_,A,B)) :-
+    logen(unfold,evalAndSave(D,C,A,B)).
+logen(bigstep/4,bigstep(true(B),_,A,A)) :-
+    logen(unfold,evaltrue(B,A)).
+logen(bigstep/4,bigstep(false(B),_,A,A)) :-
+    logen(unfold,evalfalse(B,A)).
+logen(bigstep/4,bigstep(D:E,A,B,C)) :-
+    logen(unfold,copyStateSkeleton(B,F)),
+    logen(memo,bigstep(D,A,B,F)),
+    logen(memo,bigstep(E,A,F,C)).
+logen(bigstep/4,bigstep(D+_,A,B,C)) :-
+    logen(memo,bigstep(D,A,B,C)).
+logen(bigstep/4,bigstep(_+D,A,B,C)) :-
+    logen(memo,bigstep(D,A,B,C)).
+logen(bigstep/4,bigstep(star(_),_,A,A)).
+logen(bigstep/4,bigstep(star(C),right,A,B)) :-
+    logen(unfold,bigstep(C:star(C),right,A,B)).
+logen(bigstep/4,bigstep(star(C),left,A,B)) :-
+    logen(unfold,bigstep(star(C):C,left,A,B)).
+logen(run/2,run(eps,A)) :-
+    logen(memo,haltState(A)).
+logen(run/2,run(A,B)) :-
+    logen(unfold,step(A,C,B,D)),
+    logen(memo,run(C,D)).
+logen(step/4,step(asg(var(D),C),eps,A,B)) :-
+    logen(unfold,evalAndSave(D,C,A,B)).
+logen(step/4,step(true(B),eps,A,A)) :-
+    logen(unfold,evaltrue(B,A)).
+logen(step/4,step(false(B),eps,A,A)) :-
+    logen(unfold,evalfalse(B,A)).
+logen(step/4,step(eps:A,A,B,B)).
+logen(step/4,step(C:D,E:D,A,B)) :-
+    logen(call,C\==eps),
+    logen(unfold,step(C,E,A,B)).
+logen(step/4,step(D+_,A,B,C)) :-
+    logen(unfold,step(D,A,B,C)).
+logen(step/4,step(_+D,A,B,C)) :-
+    logen(unfold,step(D,A,B,C)).
+logen(step/4,step(star(_),eps,A,A)).
+logen(step/4,step(star(C),D:star(C),A,B)) :-
+    logen(unfold,step(C,D,A,B)).
+logen(haltState/1,haltState(A)) :-
+    logen(rescall,write(A)),
+    logen(rescall,nl).
+logen(eval/3,eval(var(C),A,B)) :-
+    logen(unfold,find(A,C,B)).
+logen(eval/3,eval(cns(nat(A)),_,A)).
+logen(eval/3,eval(add(C,D),A,B)) :-
+    logen(unfold,eval(C,A,E)),
+    logen(unfold,eval(D,A,F)),
+    logen(rescall,B=E+F).
+logen(eval/3,eval(sub(C,D),A,B)) :-
+    logen(unfold,eval(C,A,E)),
+    logen(unfold,eval(D,A,F)),
+    logen(rescall,B=E-F).
+logen(eval/3,eval(mul(C,D),A,B)) :-
+    logen(unfold,eval(C,A,E)),
+    logen(unfold,eval(D,A,F)),
+    logen(rescall,B=E*F).
+logen(eval/3,eval(div(C,D),A,B)) :-
+    logen(unfold,eval(C,A,E)),
+    logen(unfold,eval(D,A,F)),
+    logen(rescall,B=E/F).
+logen(eval/3,eval(C>D,A,B)) :-
+    logen(unfold,eval(C,A,E)),
+    logen(unfold,eval(D,A,F)),
+    logen(unfold,gt(E,F,B)).
+logen(eval/3,eval(C<D,A,B)) :-
+    logen(unfold,eval(C,A,E)),
+    logen(unfold,eval(D,A,F)),
+    logen(unfold,lt(E,F,B)).
+logen(eval/3,eval(C>=D,A,B)) :-
+    logen(unfold,eval(C,A,E)),
+    logen(unfold,eval(D,A,F)),
+    logen(unfold,gte(E,F,B)).
+logen(eval/3,eval(C=<D,A,B)) :-
+    logen(unfold,eval(C,A,E)),
+    logen(unfold,eval(D,A,F)),
+    logen(unfold,lte(E,F,B)).
+logen(eval/3,eval(C==D,A,B)) :-
+    logen(unfold,eval(C,A,E)),
+    logen(unfold,eval(D,A,F)),
+    logen(unfold,eq(E,F,B)).
+logen(eval/3,eval(logicaland(C,D),A,B)) :-
+    logen(unfold,eval(C,A,E)),
+    logen(unfold,eval(D,A,F)),
+    logen(unfold,logicalAnd(B,E,F)).
+logen(eval/3,eval(not(C),A,B)) :-
+    logen(unfold,eval(C,A,D)),
+    logen(unfold,negate(D,B)).
+logen(evaltrue/2,evaltrue(A,B)) :-
+    logen(unfold,eval(A,B,1)).
+logen(evalfalse/2,evalfalse(A,B)) :-
+    logen(unfold,eval(A,B,0)).
+logen(evalAndSave/4,evalAndSave(A,B,C,D)) :-
+    logen(unfold,eval(B,C,E)),
+    logen(unfold,save(A,E,C,D)).
+logen(find/3,find([(A,B)|_],A,B)).
+logen(find/3,find([(D,_)|C],A,B)) :-
+    logen(call,A\==D),
+    logen(unfold,find(C,A,B)).
+logen(save/4,save(A,B,[(A,_)|C],[(A,D)|C])) :-
+    logen(rescall,D is B).
+logen(save/4,save(A,B,[(D,E)|C],[(D,E)|F])) :-
+    logen(call,A\==D),
+    logen(unfold,save(A,B,C,F)).
+logen(save/4,save(A,B,[],[(A,C)])) :-
+    logen(rescall,C is B).
+logen(gt/3,gt(A,B,1)) :-
+    logen(rescall,A>B).
+logen(gt/3,gt(A,B,0)) :-
+    logen(rescall,A=<B).
+logen(lt/3,lt(A,B,1)) :-
+    logen(rescall,A<B).
+logen(lt/3,lt(A,B,0)) :-
+    logen(rescall,A>=B).
+logen(gte/3,gte(A,B,1)) :-
+    logen(rescall,A>=B).
+logen(gte/3,gte(A,B,0)) :-
+    logen(rescall,A<B).
+logen(lte/3,lte(A,B,1)) :-
+    logen(rescall,A=<B).
+logen(lte/3,lte(A,B,0)) :-
+    logen(rescall,A>B).
+logen(eq/3,eq(A,B,1)) :-
+    logen(rescall,A==B).
+logen(eq/3,eq(A,B,0)) :-
+    logen(rescall,A\==B).
+logen(logicalAnd/3,logicalAnd(1,A,B)) :-
+    logen(rescall,1 is A/\B).
+logen(logicalAnd/3,logicalAnd(0,A,B)) :-
+    logen(rescall,0 is A/\B).
+logen(negate/2,negate(1,0)).
+logen(negate/2,negate(0,1)).
+logen(copyStateSkeleton/2,copyStateSkeleton([],[])).
+logen(copyStateSkeleton/2,copyStateSkeleton([(B,_)|A],[(B,_)|C])) :-
+    logen(unfold,copyStateSkeleton(A,C)).
+logen(get_options/3,get_options([],[],[])).
+logen(get_options/3,get_options([C|D],A,B)) :-
+    if(logen(unfold,recognised_option(C,E,F)),(logen(call,append(F,G,D)),logen(call,H=G),logen(call,A=[E|I]),logen(call,B=J)),(logen(call,A=I),logen(call,B=[C|J]),logen(call,H=D))),
+    logen(unfold,get_options(H,I,J)).
+logen(recognised_option/3,recognised_option('-prg',file(A),[A])).
+logen(recognised_option/3,recognised_option('-big',style(big),[])).
+logen(recognised_option/3,recognised_option('-small',style(small),[])).
+logen(recognised_option/3,recognised_option('-transform',transform(yes),[])).
+logen(recognised_option/3,recognised_option('-left',recursion(left),[])).
+logen(recognised_option/3,recognised_option('-right',recursion(right),[])).
+logen(set_options/5,set_options(A,B,C,D,E)) :-
+    if(logen(call,member(file(B),A)),logen(call,true),(logen(rescall,write('No input file given')),logen(rescall,nl),logen(call,fail))),
+    if(logen(call,member(style(C),A)),logen(call,true),logen(call,C=small)),
+    if(logen(call,member(recursion(D),A)),logen(call,true),logen(call,D=right)),
+    if(logen(call,member(transform(E),A)),logen(call,true),logen(call,E=no)).
+
+
+% Store
+:- type
+        store--->(type list(struct(',',[static,dynamic]))).
+        
+:- filter
+    go(static,static,static,static).
+:- filter
+    exec(static,static,static,static,(type store)).
+:- filter
+    bigstep(static,static,(type store),(type store)).
+:- filter
+    run(static,(type store)).
+:- filter
+    haltState((type store)).
+
