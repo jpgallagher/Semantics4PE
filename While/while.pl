@@ -14,11 +14,11 @@ main(ArgV) :-
     go(File,Style,LR,YN).
     
 go(File,Style,LR,YN) :-
-    open(File,read,S), 	% Read the AST of the parsed program
+    open(File,read,S), 				% Read the AST of the parsed program
     read(S,P),
     close(S),
     P=logen(program/1,program(Prog)),
-    vardecls(Prog,St),			% Top level variable declarations
+    vardecls(Prog,St),				% Top level variable declarations
 	member(function(main,[],Code),Prog),
     regexp(Code,Expr),
     exec(Expr,Style,LR,YN,St).
@@ -68,11 +68,20 @@ vardecls([T|P],St) :-
 initDeclVal(cns(nat(V)),V).
 initDeclVal(null,_).
 
-% Regular expressions over alphabet {asg(var(X),Expr),true(Expr), false(Expr)}
+% Regular expressions over alphabet 
+% {asg(X,Expr),true(Expr), false(Expr), decl(X,E), release(X)}
 % where X is a variable, E an expression
 %
-% E ::= asg(var(X),Expr) | true(Expr) | false(Expr) | E1:E2 | E1+E2 | star(E) | null | eps
-
+% E ::= asg(X,Expr) | 
+%		true(Expr) | 
+%		false(Expr) | 
+%		decl(X,E) 	|
+%		release(X)	|
+%		E1:E2 | 
+%		E1+E2 | 
+%		star(E) | 
+%		null | 
+%		eps
 
 % Big-step interpretation wrt a regular expression and left/right recursion
 
