@@ -83,7 +83,14 @@ bigstep(true(E),_,St,St) :-
 	evaltrue(E,St).
 bigstep(false(E),_,St,St) :-
 	evalfalse(E,St).
+bigstep(decl(var(X),E):(E1:release(var(X))),LR,St0,St3) :-
+	evalAndSave(X,E,[(X,_)|St0],St1),
+	copyStateSkeleton(St1,St2),
+	bigstep(E1,LR,St1,St2),
+	removeVar(X,St2,St3).
 bigstep(E1:E2,LR,St0,St2) :-
+	functor(E1,F,N),
+	F/N \== decl/2, 
 	copyStateSkeleton(St0,St1),
 	bigstep(E1,LR,St0,St1),
 	bigstep(E2,LR,St1,St2).
@@ -113,6 +120,10 @@ step(true(E),eps,St0,St0) :-
 	evaltrue(E,St0).
 step(false(E),eps,St0,St0) :-
 	evalfalse(E,St0).
+step(decl(var(X),E),eps,St0,St1) :-
+	evalAndSave(X,E,St0,St1).
+step(release(var(X)),eps,St0,St1) :-
+	removeVar(X,St0,St1).
 step((eps:S),S,St0,St0).
 step((S1:S2),S11:S2,St0,St1) :-
 	S1\==eps,
@@ -208,6 +219,11 @@ save(X,V,[(Y,M)|St],[(Y,M)|St1]) :-
 	save(X,V,St,St1).
 save(X,V,[],[(X,W)]) :-
 	W is V.
+	
+removeVar(X,[(X,_)|St],St).
+removeVar(X,[(Y,M)|St],[(Y,M)|St1]) :-
+	X \== Y,
+	removeVar(X,St,St1).
 
 gt(X,Y,1) :-
 	X > Y.

@@ -15,12 +15,6 @@ logen(go/4,go(A,B,C,D)) :-
     logen(call,regexp(I,J)),
     logen(memo,exec(J,B,C,D,H)).
 logen(exec/5,exec(A,big,right,no,B)) :-
-    logen(memo,bigstep(A,right,B,C)),
-    logen(rescall,write(C)),
-    logen(rescall,nl).
-logen(exec/5,exec(A,small,right,no,B)) :-
-    logen(memo,run(A,B)).
-logen(exec/5,exec(A,big,right,no,B)) :-
     logen(unfold,copyStateSkeleton(B,C)),
     logen(memo,bigstep(A,right,B,C)),
     logen(rescall,write(C)),
@@ -68,19 +62,26 @@ logen(bigstep/4,bigstep(true(B),_,A,A)) :-
     logen(unfold,evaltrue(B,A)).
 logen(bigstep/4,bigstep(false(B),_,A,A)) :-
     logen(unfold,evalfalse(B,A)).
+logen(bigstep/4,bigstep(decl(var(E),D):(F:release(var(E))),A,B,C)) :-
+    logen(unfold,evalAndSave(E,D,[(E,_)|B],G)),
+    logen(unfold,copyStateSkeleton(G,H)),
+    logen(memo,bigstep(F,A,G,H)),
+    logen(unfold,removeVar(E,H,C)).
 logen(bigstep/4,bigstep(D:E,A,B,C)) :-
-    logen(unfold,copyStateSkeleton(B,F)),
-    logen(memo,bigstep(D,A,B,F)),
-    logen(memo,bigstep(E,A,F,C)).
+    logen(call,functor(D,F,G)),
+    logen(call,F/G\==decl/2),
+    logen(unfold,copyStateSkeleton(B,H)),
+    logen(memo,bigstep(D,A,B,H)),
+    logen(memo,bigstep(E,A,H,C)).
 logen(bigstep/4,bigstep(D+_,A,B,C)) :-
     logen(memo,bigstep(D,A,B,C)).
 logen(bigstep/4,bigstep(_+D,A,B,C)) :-
     logen(memo,bigstep(D,A,B,C)).
 logen(bigstep/4,bigstep(star(_),_,A,A)).
 logen(bigstep/4,bigstep(star(C),right,A,B)) :-
-    logen(unfold,bigstep(C:star(C),right,A,B)).
+    logen(memo,bigstep(C:star(C),right,A,B)).
 logen(bigstep/4,bigstep(star(C),left,A,B)) :-
-    logen(unfold,bigstep(star(C):C,left,A,B)).
+    logen(memo,bigstep(star(C):C,left,A,B)).
 logen(run/2,run(eps,A)) :-
     logen(memo,haltState(A)).
 logen(run/2,run(A,B)) :-
@@ -92,6 +93,10 @@ logen(step/4,step(true(B),eps,A,A)) :-
     logen(unfold,evaltrue(B,A)).
 logen(step/4,step(false(B),eps,A,A)) :-
     logen(unfold,evalfalse(B,A)).
+logen(step/4,step(decl(var(D),C),eps,A,B)) :-
+    logen(unfold,evalAndSave(D,C,A,B)).
+logen(step/4,step(release(var(C)),eps,A,B)) :-
+    logen(unfold,removeVar(C,A,B)).
 logen(step/4,step(eps:A,A,B,B)).
 logen(step/4,step(C:D,E:D,A,B)) :-
     logen(call,C\==eps),
@@ -170,6 +175,10 @@ logen(save/4,save(A,B,[(D,E)|C],[(D,E)|F])) :-
     logen(unfold,save(A,B,C,F)).
 logen(save/4,save(A,B,[],[(A,C)])) :-
     logen(rescall,C is B).
+logen(removeVar/3,removeVar(A,[(A,_)|B],B)).
+logen(removeVar/3,removeVar(A,[(C,D)|B],[(C,D)|E])) :-
+    logen(call,A\==C),
+    logen(unfold,removeVar(A,B,E)).
 logen(gt/3,gt(A,B,1)) :-
     logen(rescall,A>B).
 logen(gt/3,gt(A,B,0)) :-

@@ -1,9 +1,19 @@
 :- module(transformExpr,_).
  	
-% Regular expressions over alphabet {asg(X,Expr),true(Expr), false(Expr)}
+% Regular expressions over alphabet 
+% {asg(X,Expr),true(Expr), false(Expr), decl(X,E), release(X)}
 % where X is a variable, E an expression
 %
-% E ::= asg(X,Expr) | true(Expr) | false(Expr) | E1:E2 | E1+E2 | star(E) | null | eps
+% E ::= asg(X,Expr) | 
+%		true(Expr) | 
+%		false(Expr) | 
+%		decl(X,E) 	|
+%		release(X)	|
+%		E1:E2 | 
+%		E1+E2 | 
+%		star(E) | 
+%		null | 
+%		eps
 %
 % Transform by replacing star(A+B) by star(A):star(B:star(A))
 	
@@ -60,7 +70,8 @@ appendDisj(E1,E2,E1+E2) :-
 literal(asg(_,_)).
 literal(true(_)).
 literal(false(_)).
-
+literal(decl(_,_)).
+literal(release(_)).
 
 pathLiteral(E) :-
 	literal(E).
