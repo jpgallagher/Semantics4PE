@@ -2,7 +2,7 @@
 
 :- use_module(while_reg).
 :- use_module(transformExpr).
-
+:- use_module(library(random)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 % initial setup and entry
@@ -155,6 +155,7 @@ haltState(St) :-
 %----- expressions -----
 %%%%%%%%%%%%%%%%%%%%%%%%
 
+eval(null,_St,_V).
 eval(var(X),St,V) :-
 	find(St,X,V).
 eval(cns(nat(N)),_,N).
@@ -201,6 +202,10 @@ eval(logicaland(E1,E2),St0,V) :-
 eval(not(E),St0,V) :-
 	eval(E,St0,V1),
 	negate(V1,V).
+eval(call(rand,[]),_St0,V) :-	% ad hoc handling of rand() function as nondet boolean
+	random(V1),
+	V is round(V1).
+	
 
 evaltrue(E,St) :-
 	eval(E,St,1).

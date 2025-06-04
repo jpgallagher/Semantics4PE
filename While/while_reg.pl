@@ -29,8 +29,13 @@ regexp(seq(S1,S2),E1:E2) :-
 regexp(ifthenelse(E,S1,S2),(true(E):E1)+(false(E):E2)) :-
 	regexp(S1,E1),
 	regexp(S2,E2).
+%regexp(ifthenelse(E,S1,S2),decl(var(v),E):(((true(var(v)):E1)+(false(var(v)):E2)):release(var(v)))) :-
+%	regexp(S1,E1),
+%	regexp(S2,E2).
 regexp(while(E,S1),star(true(E):E1):false(E)) :-
 	regexp(S1,E1).
+%regexp(while(E,S1),decl(var(b),E):((star(true(var(b)):(E1:asg(var(b),E))):false(var(b))):release(var(b)))) :-
+%	regexp(S1,E1).
 regexp(for(Init,Cond,Incr,S1),E1:E2) :-
 	regexp(Init,E1),
 	regexp(while(Cond,seq(S1,Incr)),E2).

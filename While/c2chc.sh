@@ -37,7 +37,7 @@ shift $(( OPTIND - 1 ))
 
 prg=$1
 f=`basename $prg`
-echo "$f"
+echo "$f" $style $recursion $yn
 f=${f%.c} # remove .c extension
 
 d=`dirname "$prg"`
@@ -52,7 +52,7 @@ fi
 java -jar "$AST"/xcfp.jar "$prg" > "$resultdir"/parse.out
 $AST/ast4sem "$resultdir"/parse.out "$resultdir"/ast.out
 
-# PE
+# PE of while.pl wrt to goal
 logengoal="go("\'"$resultdir"/ast.out\'",$style"",$recursion"",$yn"")"
 # echo "$logengoal"
 

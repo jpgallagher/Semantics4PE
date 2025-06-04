@@ -1,6 +1,7 @@
 :-module(while,_).
 :-use_module(while_reg).
 :-use_module(transformExpr).
+:-use_module(library(random)).
 logen(main/1,main(A)) :-
     logen(unfold,get_options(A,B,_)),
     logen(unfold,set_options(B,C,D,E,F)),
@@ -111,6 +112,7 @@ logen(step/4,step(star(C),D:star(C),A,B)) :-
 logen(haltState/1,haltState(A)) :-
     logen(rescall,write(A)),
     logen(rescall,nl).
+logen(eval/3,eval(null,A,B)).
 logen(eval/3,eval(var(C),A,B)) :-
     logen(unfold,find(A,C,B)).
 logen(eval/3,eval(cns(nat(A)),_,A)).
@@ -153,10 +155,13 @@ logen(eval/3,eval(C==D,A,B)) :-
 logen(eval/3,eval(logicaland(C,D),A,B)) :-
     logen(unfold,eval(C,A,E)),
     logen(unfold,eval(D,A,F)),
-    logen(unfold,logicalAnd(B,E,F)).
+    logen(memo,logicalAnd(B,E,F)).
 logen(eval/3,eval(not(C),A,B)) :-
     logen(unfold,eval(C,A,D)),
     logen(unfold,negate(D,B)).
+logen(eval/3,eval(call(rand,[]),_,A)) :-
+    logen(rescall,random(B)),
+    logen(rescall,A is round(B)).
 logen(evaltrue/2,evaltrue(A,B)) :-
     logen(unfold,eval(A,B,1)).
 logen(evalfalse/2,evalfalse(A,B)) :-
@@ -237,6 +242,16 @@ logen(set_options/5,set_options(A,B,C,D,E)) :-
     bigstep(static,static,(type store),(type store)).
 :- filter
     run(static,(type store)).
+:- filter
+    logicalAnd(dynamic,dynamic,dynamic).
+:- filter
+    lt(dynamic,dynamic,dynamic).
+:- filter
+    gt(dynamic,dynamic,dynamic).
+:- filter
+    evaltrue(static,(type store)).
+:- filter
+    evalfalse(static,(type store)).
 :- filter
     haltState((type store)).
 
