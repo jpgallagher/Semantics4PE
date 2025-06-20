@@ -18,7 +18,8 @@
 % Transform by replacing star(A+B) by star(B):star(A:star(B))
 % Preserve local environments of form decl(--)  S  release(---)
 	
-transformRegExpr(eps,eps).
+%transformRegExpr(eps,eps).
+%transformRegExpr(observe,observe).
 transformRegExpr(E,E) :-
 	literal(E).
 transformRegExpr(decl(var(X),E):(E1:release(var(X))),decl(var(X),E):(E2:release(var(X)))) :-
