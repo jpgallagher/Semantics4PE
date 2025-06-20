@@ -23,7 +23,6 @@
 
 regexp(skip,eps).
 regexp(asg(var(X),E),asg(var(X),E)).
-regexp(call(observe,[]),observe).
 regexp(seq(S1,S2),E1:E2) :-
 	regexp(S1,E1),
 	regexp(S2,E2).
