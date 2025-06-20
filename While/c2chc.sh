@@ -8,6 +8,7 @@
 
 AST="/Users/jpg/recsolv/bigstep/CParser"
 WHILE="."
+BIGSTEP="/Users/jpg/recsolv/bigstep/"
 
 # Interpret the script options as options for "while"
 
@@ -59,6 +60,14 @@ logengoal="go("\'"$resultdir"/ast.out\'",$style"",$recursion"",$yn"")"
 # logen
 cogen -np $WHILE/"while.pl" -m "$logengoal" > "$resultdir"/$f.pe
 
+# extract the memo table as Prolog facts
+sed -n 's/^\/\* \(memo_table.*\)\*\//\1/p' "$resultdir"/$f.pe > "$resultdir"/$f.memo
+
+# Compute predicate signatures and renaming table
+$WHILE/signatures "$resultdir"/$f.memo "$resultdir"/$f.sigs
+
+$WHILE/renamePreds "$resultdir"/$f.pe "$resultdir"/$f.sigs "$resultdir"/$f.renamed.pl
+
 # unfold determinate calls
 
 case "${yn}" in  
@@ -72,4 +81,6 @@ outname=$f"_"$style"_"$recursion"_"$trans".pl"
 
 # echo $outname
 
-chclibs-unfoldForward -prg "$resultdir"/$f.pe -entry "go__0" -det -eq -o "$resultdir"/$outname
+chclibs-unfoldForward -prg "$resultdir"/$f.renamed.pl -entry "go__0" -det -eq -o "$resultdir"/$outname
+
+$WHILE/cleanup.sh
