@@ -8,7 +8,6 @@
 
 AST="/Users/jpg/recsolv/bigstep/CParser"
 WHILE="."
-BIGSTEP="/Users/jpg/recsolv/bigstep/"
 
 # Interpret the script options as options for "while"
 
