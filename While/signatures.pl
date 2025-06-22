@@ -49,6 +49,8 @@ memo_entry(A,observeStates,observeStates,(St0,St1)) :-
 	my_clause(memo_table(_,observeStates(St0,St1),A,_),[],_).
 memo_entry(A,observeState,observeState,St0) :-
 	my_clause(memo_table(_,observeState(St0),A,_),[],_).
+memo_entry(A,observeCost,observeCost,(Vs,C)) :-
+	my_clause(memo_table(_,observeCost(Vs,C),A,_),[],_).
 
 
 getArgName(call(F,_),F) :-
@@ -99,6 +101,9 @@ makeSignature(observeStates,N,Sig) :-
 	makeList(N,num,Is),
 	makeSig(Is,Sig).
 makeSignature(observeState,N,Sig) :-
+	makeList(N,num,Is),
+	makeSig(Is,Sig).
+makeSignature(observeCost,N,Sig) :-
 	makeList(N,num,Is),
 	makeSig(Is,Sig).
 	

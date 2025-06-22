@@ -39,13 +39,6 @@ logen(exec/5,exec(A,big,left,yes,B)) :-
 logen(exec/5,exec(A,small,left,yes,B)) :-
     logen(call,transformRegExpr(A,C)),
     logen(memo,run(C,B)).
-logen(vardecls/2,vardecls([],[])).
-logen(vardecls/2,vardecls([[vardecl(var(C),_,B)]|A],[(C,E)|D])) :-
-    logen(unfold,initDeclVal(B,E)),
-    logen(unfold,vardecls(A,D)).
-logen(vardecls/2,vardecls([B|C],A)) :-
-    logen(call,B\=[vardecl(_,_,_)]),
-    logen(unfold,vardecls(C,A)).
 logen(genvardecls/3,genvardecls([],A,A)).
 logen(genvardecls/3,genvardecls([[vardecl(var(D),_,C)]|B],let(var(D),C,E),A)) :-
     logen(unfold,genvardecls(B,E,A)).
@@ -217,11 +210,23 @@ logen(copyStateSkeleton/2,copyStateSkeleton([],[])).
 logen(copyStateSkeleton/2,copyStateSkeleton([(B,_)|A],[(B,_)|C])) :-
     logen(unfold,copyStateSkeleton(A,C)).
 logen(observeState/1,observeState(A)) :-
+    logen(unfold,projectVars(A,_)),
     logen(rescall,write(A)),
     logen(rescall,nl).
 logen(observeStates/2,observeStates(A,B)) :-
+    logen(call,append(C,[_],A)),
+    logen(call,append(_,[D],B)),
+    logen(memo,observeCost(C,D)),
+    logen(unfold,projectVars(B,_)),
     logen(rescall,write((A,B))),
     logen(rescall,nl).
+logen(projectVars/2,projectVars([],0)).
+logen(projectVars/2,projectVars([B|C],A)) :-
+    logen(unfold,projectVars(C,D)),
+    logen(call,A is D+1),
+    logen(memo,observeVar(A,B)).
+logen(observeVar/2,observeVar(_,_)).
+logen(observeCost/2,observeCost(_,_)).
 logen(get_options/3,get_options([],[],[])).
 logen(get_options/3,get_options([C|D],A,B)) :-
     if(logen(unfold,recognised_option(C,E,F)),(logen(call,append(F,G,D)),logen(call,H=G),logen(call,A=[E|I]),logen(call,B=J)),(logen(call,A=I),logen(call,B=[C|J]),logen(call,H=D))),
@@ -265,3 +270,7 @@ logen(set_options/5,set_options(A,B,C,D,E)) :-
     observeState((type store)).
 :- filter
     observeStates((type store),(type store)).
+:- filter
+    observeVar(static,struct(',',[static,dynamic])).
+:- filter
+    observeCost((type store),struct(',',[static,dynamic])).

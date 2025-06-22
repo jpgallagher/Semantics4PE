@@ -13,13 +13,12 @@ main(ArgV) :-
     go(File,Style,LR,YN).
     
 go(File,Style,LR,YN) :-
-    open(File,read,S), 				% Read the AST of the parsed program
+    open(File,read,S), 					% Read the AST of the parsed program
     read(S,P),
     close(S),
-    P=logen(program/1,program(Prog)),
-    %vardecls(Prog,St),				% Top level variable declarations
+    P=logen(program/1,program(Prog)), 	% Get the main procedure
 	member(function(main,[],Code),Prog),
-	genvardecls(Prog,Code1,Code),
+	genvardecls(Prog,Code1,Code), 		% Global variable declarations
     regexp(let(var(cost),cns(nat(0)),Code1),Expr),	% Initialise cost variable
     exec(Expr,Style,LR,YN,[]).
     
@@ -48,14 +47,6 @@ exec(Expr,small,left,yes,St) :-
 	transformRegExpr(Expr,TExpr),
 	run(TExpr,St).		
 	
-
-vardecls([],[]).
-vardecls([[vardecl(var(X),_,Init)]|P],[(X,V)|St]) :-
-	initDeclVal(Init,V),
-	vardecls(P,St).
-vardecls([T|P],St) :-
-	T \= [vardecl(_,_,_)],
-	vardecls(P,St).
 	
 genvardecls([],Code0,Code0).
 genvardecls([[vardecl(var(X),_,Init)]|P],let(var(X),Init,Code1),Code0) :-
@@ -276,11 +267,27 @@ copyStateSkeleton([(X,_)|St],[(X,_)|St1]) :-
 	copyStateSkeleton(St,St1).
 	
 observeState(St) :-	
+	projectVars(St,_),
 	write(St),
 	nl.
+	
 observeStates(St0,St1) :-	
+	append(IVars,[_],St0),	% Separate input vars and final cost
+	append(OVars,[C],St1),
+	observeCost(IVars,C),
+	projectVars(St1,_),
 	write((St0,St1)),
 	nl.
+	
+projectVars([],0).
+projectVars([X|Xs],N) :-
+	projectVars(Xs,N1),
+	N is N1+1,
+	observeVar(N,X).
+	
+observeVar(_,_).	
+
+observeCost(_,_).
 
 % Getting and setting options
 
