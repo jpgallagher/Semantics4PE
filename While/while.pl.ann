@@ -90,7 +90,7 @@ logen(step/4,step(true(B),eps,A,A)) :-
 logen(step/4,step(false(B),eps,A,A)) :-
     logen(unfold,evalfalse(B,A)).
 logen(step/4,step(decl(var(D),C),eps,A,B)) :-
-    logen(unfold,evalAndSave(D,C,A,B)).
+    logen(unfold,evalAndSave(D,C,[(D,_)|A],B)).
 logen(step/4,step(release(var(C)),eps,A,B)) :-
 	logen(memo,observeState(A)),
     logen(unfold,removeVar(C,A,B)).
@@ -152,6 +152,13 @@ logen(eval/3,eval(logicaland(B,_),A,0)) :-
     logen(unfold,eval(B,A,0)).
 logen(eval/3,eval(logicaland(_,B),A,0)) :-
     logen(unfold,eval(B,A,0)).
+logen(eval/3,eval(logicalor(B,C),A,0)) :-
+    logen(unfold,eval(B,A,0)),
+    logen(unfold,eval(C,A,0)).
+logen(eval/3,eval(logicalor(B,_),A,1)) :-
+    logen(unfold,eval(B,A,1)).
+logen(eval/3,eval(logicalor(_,B),A,1)) :-
+    logen(unfold,eval(B,A,1)).
 logen(eval/3,eval(not(C),A,B)) :-
     logen(unfold,eval(C,A,D)),
     logen(unfold,negate(D,B)).
@@ -181,21 +188,21 @@ logen(removeVar/3,removeVar(A,[(C,D)|B],[(C,D)|E])) :-
     logen(call,A\==C),
     logen(unfold,removeVar(A,B,E)).
 logen(gt/3,gt(A,B,1)) :-
-    logen(rescall,A>B).
+    logen(rescall,A>=B+1).
 logen(gt/3,gt(A,B,0)) :-
     logen(rescall,A=<B).
 logen(lt/3,lt(A,B,1)) :-
-    logen(rescall,A<B).
+    logen(rescall,A=<B-1).
 logen(lt/3,lt(A,B,0)) :-
     logen(rescall,A>=B).
 logen(gte/3,gte(A,B,1)) :-
     logen(rescall,A>=B).
 logen(gte/3,gte(A,B,0)) :-
-    logen(rescall,A<B).
+    logen(rescall,A=<B-1).
 logen(lte/3,lte(A,B,1)) :-
     logen(rescall,A=<B).
 logen(lte/3,lte(A,B,0)) :-
-    logen(rescall,A>B).
+    logen(rescall,A>=B+1).
 logen(eq/3,eq(A,B,1)) :-
     logen(rescall,A==B).
 logen(eq/3,eq(A,B,0)) :-

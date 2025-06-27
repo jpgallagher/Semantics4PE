@@ -122,7 +122,7 @@ step(true(E),eps,St0,St0) :-
 step(false(E),eps,St0,St0) :-
 	evalfalse(E,St0).
 step(decl(var(X),E),eps,St0,St1) :-
-	evalAndSave(X,E,St0,St1).
+	evalAndSave(X,E,[(X,_)|St0],St1).
 step(release(var(X)),eps,St0,St1) :-
 	observeState(St0),
 	removeVar(X,St0,St1).
@@ -191,12 +191,17 @@ eval(logicaland(E1,_E2),St0,0) :-
 	eval(E1,St0,0).
 eval(logicaland(_E1,E2),St0,0) :-
 	eval(E2,St0,0).
+eval(logicalor(E1,E2),St0,0) :-
+	eval(E1,St0,0),
+	eval(E2,St0,0).
+eval(logicalor(E1,_E2),St0,1) :-
+	eval(E1,St0,1).
+eval(logicalor(_E1,E2),St0,1) :-
+	eval(E2,St0,1).
 eval(not(E),St0,V) :-
 	eval(E,St0,V1),
 	negate(V1,V).
 eval(call(rand,[]),_St0,V) :-	% ad hoc handling of rand() function
-	%random(V1),
-	%V is round(V1).
 	V>=0,
 	V=<1.
 	
@@ -233,25 +238,26 @@ removeVar(X,[(Y,M)|St],[(Y,M)|St1]) :-
 	X \== Y,
 	removeVar(X,St,St1).
 
+% Assume args are int
 gt(X,Y,1) :-
-	X > Y.
+	X >= Y+1.
 gt(X,Y,0) :-
 	X =< Y.
 	
 lt(X,Y,1) :-
-	X < Y.
+	X =< Y-1.
 lt(X,Y,0) :-
 	X >= Y.
 	
 gte(X,Y,1) :-
 	X >= Y.
 gte(X,Y,0) :-
-	X < Y.
+	X =< Y-1.
 	
 lte(X,Y,1) :-
 	X =< Y.
 lte(X,Y,0) :-
-	X > Y.
+	X >= Y+1.
 	
 eq(X,Y,1) :-
 	X == Y.
