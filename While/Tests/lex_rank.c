@@ -2,8 +2,8 @@ void main() {
 
 	int a,b;
 	
-	while(a>0){
-    	if(b>0) {
+	while(a>=1){
+    	if(b>=1) {
        		a=a+b;
         	b--;
         }

@@ -7,12 +7,12 @@ void main() {
 	int n = 0;
 	assert(m>=0);
 	i = m;
-	while (i>0) {
+	while (i>=1) {
 		i--;
 		if (rand())
 			n++;
 		else {
-			while(n>0 && rand()) {
+			while(n>=1 && rand()) {
 			   n--;
 			}
 		}

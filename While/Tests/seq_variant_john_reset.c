@@ -1,10 +1,13 @@
+void assert(int e);
+
 void main() {
 	int i,j;
-	while (i>0) {
+	assert(i>=0 && j>=0);
+	while (i>=1) {
    		j=10;
    		i--;
    	}
-	while (j>0) {
+	while (j>=1) {
 		j--;
 	}
 }
