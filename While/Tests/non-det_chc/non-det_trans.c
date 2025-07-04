@@ -12,7 +12,6 @@ void main() {
    }
    while (a>0 && b>0 && rand()){
       a=a-1;
-      b=b-1;
       while (a>0 && b>0 && !rand()){
          a=a+1;
          b=b-1;
