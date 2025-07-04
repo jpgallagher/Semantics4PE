@@ -50,14 +50,15 @@ transformStar(star(E),star(E)) :-
 transformStar(star(E1+E2),E3:star(E1:E3)) :-
 	transformStar(star(E2),E3).
 	
-straightLineCode(skip).
-straightLineCode(call(assert,_)).
+straightLineCode(eps).
+straightLineCode(null).
+straightLineCode(assert(_)).
 straightLineCode(asg(_,_)).
 straightLineCode(S1:S2) :-
 	straightLineCode(S1),
 	straightLineCode(S2).
-straightLineCode(let(_,_,S1)) :-
-	straightLineCode(S1).
+straightLineCode(decl(_,_)).
+straightLineCode(release(_)).
 
 dnfRegExpr(E,E) :-
 	pathLiteral(E).
