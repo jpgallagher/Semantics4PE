@@ -22,7 +22,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%
 
 regexp(skip,eps).
-regexp(call(assert,[E]),true(E)).
+regexp(call(assert,[E]),assert(E)).
 regexp(asg(var(X),E),asg(var(X),E)).
 regexp(seq(S1,S2),E1:E2) :-
 	regexp(S1,E1),
@@ -30,7 +30,9 @@ regexp(seq(S1,S2),E1:E2) :-
 regexp(ifthenelse(E,S1,S2),(true(E):E1)+(false(E):E2)) :-
 	regexp(S1,E1),
 	regexp(S2,E2).
-regexp(while(E,S1),star(true(E):E1):false(E)) :-
+%regexp(while(E,S1),star(true(E):E1):false(E)) :-
+%	regexp(S1,E1).
+regexp(while(E,S1),while(E,E1)) :-
 	regexp(S1,E1).
 % Versions for if and while statements that evaluate their condition only once
 %regexp(ifthenelse(E,S1,S2),decl(var(v),E):(((true(var(v)):E1)+(false(var(v)):E2)):release(var(v)))) :-
@@ -44,6 +46,6 @@ regexp(for(Init,Cond,Incr,S1),E1:E2) :-
 regexp(let(X,E,S1),decl(X,E):(E1:release(X))) :-
 	regexp(S1,E1).
 
-	
+
 
 

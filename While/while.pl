@@ -2,6 +2,8 @@
 
 :- use_module(while_reg).
 :- use_module(transformExpr).
+:- use_module(reg2c).
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 % initial setup and entry
@@ -63,14 +65,15 @@ initDeclVal(null,_).
 % where X is a variable, E an expression
 %
 % E ::= asg(X,Expr) | 
-%		true(Expr) | 
+%		true(Expr) 	| 
 %		false(Expr) | 
+%		assert(E)	|
 %		decl(X,E) 	|
 %		release(X)	|
-%		E1:E2 | 
-%		E1+E2 | 
-%		star(E) | 
-%		null | 
+%		E1:E2 		| 
+%		E1+E2 		| 
+%		star(E) 	| 
+%		null 		| 
 %		eps
 
 % Big-step interpretation wrt a regular expression and left/right recursion
@@ -80,6 +83,8 @@ bigstep(asg(var(X),E),_,St0,St2) :-
 	evalAndSave(X,E,St0,St1),
 	evalAndSave(cost,add(var(cost),cns(nat(1))),St1,St2).	% increment cost
 bigstep(true(E),_,St,St) :-
+	evaltrue(E,St).
+bigstep(assert(E),_,St,St) :-
 	evaltrue(E,St).
 bigstep(false(E),_,St,St) :-
 	evalfalse(E,St).
@@ -99,11 +104,19 @@ bigstep(E1+_,LR,St0,St1) :-
 	bigstep(E1,LR,St0,St1).
 bigstep(_+E2,LR,St0,St1) :-
 	bigstep(E2,LR,St0,St1).
-bigstep(star(_),_,St,St).
-bigstep(star(E),right,St0,St1) :-		% Right recursive interpretation
-	bigstep(E:star(E),right,St0,St1).
-bigstep(star(E),left,St0,St1) :-		% Left recursive interpretation
-	bigstep(star(E):E,left,St0,St1).
+%bigstep(star(_),_,St,St).
+%bigstep(star(E),right,St0,St1) :-		% Right recursive interpretation
+%	bigstep(E:star(E),right,St0,St1).
+%bigstep(star(E),left,St0,St1) :-		% Left recursive interpretation
+%	bigstep(star(E):E,left,St0,St1).
+bigstep(while(E,_),_,St0,St0) :-
+	evalfalse(E,St0).
+bigstep(while(Expr,E),right,St0,St1) :-		% Right recursive interpretation
+	evaltrue(Expr,St0),
+	bigstep(E:while(Expr,E),right,St0,St1).
+%bigstep(while(Expr,E),left,St0,St1) :-		% Left recursive interpretation omitted
+%	evaltrue(Expr,St0),
+%	bigstep(while(Expr,E):E,right,St0,St1).
 	
 
 % Small-step interpretation wrt a regular expression 
@@ -118,6 +131,8 @@ step(asg(var(X),E),eps,St0,St2) :-
 	evalAndSave(X,E,St0,St1),
 	evalAndSave(cost,add(var(cost),cns(nat(1))),St1,St2).	% increment cost
 step(true(E),eps,St0,St0) :-
+	evaltrue(E,St0).
+step(assert(E),eps,St0,St0) :-
 	evaltrue(E,St0).
 step(false(E),eps,St0,St0) :-
 	evalfalse(E,St0).
@@ -134,9 +149,14 @@ step(Expr1+_Expr2,Expr11,St0,St1) :-
 	step(Expr1,Expr11,St0,St1).
 step(_Expr1+Expr2,Expr21,St0,St1) :-
 	step(Expr2,Expr21,St0,St1).
-step(star(_Expr),eps,St0,St0).
-step(star(Expr),Expr1:star(Expr),St0,St1) :-		% Right recursive interpretation
-	step(Expr,Expr1,St0,St1).
+%step(star(_Expr),eps,St0,St0).
+%step(star(Expr),Expr1:star(Expr),St0,St1) :-		% Right recursive interpretation
+%	step(Expr,Expr1,St0,St1).
+step(while(Expr,_E),eps,St0,St0) :-
+	evalfalse(Expr,St0).
+step(while(Expr,E),E1:while(Expr,E),St0,St1) :-		% Right recursive interpretation
+	evaltrue(Expr,St0),
+	step(E,E1,St0,St1).
 
 	
 	
@@ -279,7 +299,7 @@ observeState(St) :-
 	
 observeStates(St0,St1) :-	
 	append(IVars,[_],St0),	% Separate input vars and final cost
-	append(OVars,[C],St1),
+	append(_,[C],St1),
 	observeCost(IVars,C),
 	projectVars(St1,_),
 	write((St0,St1)),

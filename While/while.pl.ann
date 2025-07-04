@@ -53,10 +53,10 @@ logen(bigstep/4,bigstep(asg(var(D),C),_,A,B)) :-
     logen(unfold,evalAndSave(cost,add(var(cost),cns(nat(1))),E,B)).
 logen(bigstep/4,bigstep(true(B),_,A,A)) :-
     logen(unfold,evaltrue(B,A)).
+logen(bigstep/4,bigstep(assert(B),_,A,A)) :-
+    logen(unfold,evaltrue(B,A)).
 logen(bigstep/4,bigstep(false(B),_,A,A)) :-
     logen(unfold,evalfalse(B,A)).
-logen(bigstep/4,bigstep(observe,_,A,A)) :-
-    logen(memo,observeState(A)).
 logen(bigstep/4,bigstep(decl(var(E),D):(F:release(var(E))),A,B,C)) :-
     logen(unfold,evalAndSave(E,D,[(E,_)|B],G)),
     logen(unfold,copyStateSkeleton(G,H)),
@@ -73,11 +73,11 @@ logen(bigstep/4,bigstep(D+_,A,B,C)) :-
     logen(memo,bigstep(D,A,B,C)).
 logen(bigstep/4,bigstep(_+D,A,B,C)) :-
     logen(memo,bigstep(D,A,B,C)).
-logen(bigstep/4,bigstep(star(_),_,A,A)).
-logen(bigstep/4,bigstep(star(C),right,A,B)) :-
-    logen(memo,bigstep(C:star(C),right,A,B)).
-logen(bigstep/4,bigstep(star(C),left,A,B)) :-
-    logen(memo,bigstep(star(C):C,left,A,B)).
+logen(bigstep/4,bigstep(while(B,_),_,A,A)) :-
+    logen(unfold,evalfalse(B,A)).
+logen(bigstep/4,bigstep(while(C,D),right,A,B)) :-
+    logen(unfold,evaltrue(C,A)),
+    logen(memo,bigstep(D:while(C,D),right,A,B)).
 logen(run/2,run(eps,A)).
 logen(run/2,run(A,B)) :-
     logen(unfold,step(A,C,B,D)),
@@ -86,6 +86,8 @@ logen(step/4,step(asg(var(D),C),eps,A,B)) :-
     logen(unfold,evalAndSave(D,C,A,E)),
     logen(unfold,evalAndSave(cost,add(var(cost),cns(nat(1))),E,B)).
 logen(step/4,step(true(B),eps,A,A)) :-
+    logen(unfold,evaltrue(B,A)).
+logen(step/4,step(assert(B),eps,A,A)) :-
     logen(unfold,evaltrue(B,A)).
 logen(step/4,step(false(B),eps,A,A)) :-
     logen(unfold,evalfalse(B,A)).
@@ -102,9 +104,11 @@ logen(step/4,step(D+_,A,B,C)) :-
     logen(unfold,step(D,A,B,C)).
 logen(step/4,step(_+D,A,B,C)) :-
     logen(unfold,step(D,A,B,C)).
-logen(step/4,step(star(_),eps,A,A)).
-logen(step/4,step(star(C),D:star(C),A,B)) :-
-    logen(unfold,step(C,D,A,B)).
+logen(step/4,step(while(B,_),eps,A,A)) :-
+    logen(unfold,evalfalse(B,A)).
+logen(step/4,step(while(C,D),E:while(C,D),A,B)) :-
+    logen(unfold,evaltrue(C,A)),
+    logen(unfold,step(D,E,A,B)).
 logen(eval/3,eval(null,A,B)).
 logen(eval/3,eval(var(C),A,B)) :-
     logen(unfold,find(A,C,B)).

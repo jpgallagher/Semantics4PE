@@ -12,14 +12,14 @@
 %		E1:E2 | 
 %		E1+E2 | 
 %		star(E) | 
+%		while(Expr,E) | 
 %		null | 
 %		eps
 %
 % Transform by replacing star(A+B) by star(B):star(A:star(B))
+% Transform by replacing while(E,A+B) by while(E,B):while(E,A:while(E,B))
 % Preserve local environments of form decl(--)  S  release(---)
 	
-%transformRegExpr(eps,eps).
-%transformRegExpr(observe,observe).
 transformRegExpr(E,E) :-
 	literal(E).
 transformRegExpr(decl(var(X),E):(E1:release(var(X))),decl(var(X),E):(E2:release(var(X)))) :-
@@ -36,12 +36,29 @@ transformRegExpr(star(E),E3) :-
 	transformRegExpr(E,E1),
 	dnfRegExpr(E1,E2),
 	transformStar(star(E2),E3).
-	
+transformRegExpr(while(E,S),S4) :-
+	dnfRegExpr(S,(true(E1):S1)+(false(E1):S2)),
+	straightLineCode(S1),
+	straightLineCode(S2),
+	!,
+	S3=while(logicaland(E,not(E1)),S2),
+	S4=S3:while(logicaland(E,E1),S1:S3).
+transformRegExpr(while(E,S),while(E,S)).
+
 transformStar(star(E),star(E)) :-
 	singlePath(E).
 transformStar(star(E1+E2),E3:star(E1:E3)) :-
 	transformStar(star(E2),E3).
 	
+straightLineCode(skip).
+straightLineCode(call(assert,_)).
+straightLineCode(asg(_,_)).
+straightLineCode(S1:S2) :-
+	straightLineCode(S1),
+	straightLineCode(S2).
+straightLineCode(let(_,_,S1)) :-
+	straightLineCode(S1).
+
 dnfRegExpr(E,E) :-
 	pathLiteral(E).
 dnfRegExpr(E1+E2, E1+E3) :-
@@ -88,12 +105,14 @@ literal(eps).
 literal(asg(_,_)).
 literal(true(_)).
 literal(false(_)).
+literal(assert(_)).
 literal(decl(_,_)).
 literal(release(_)).
 
 pathLiteral(E) :-
 	literal(E).
-pathLiteral(star(_)).	% star within a loop path treated as a literal
+pathLiteral(star(_)).		% star within a loop path treated as a literal
+pathLiteral(while(_,_)).	% while within a loop path treated as a literal
 
 singlePath(E) :-
 	pathLiteral(E).
