@@ -7,8 +7,9 @@ void main() {
 	while(a>0 && b>0){
     	if(rand())
         	a--;
-    	else
+    	else {
         	a++;
-        b--;
+        	b--;
+        }
 	}
 }
