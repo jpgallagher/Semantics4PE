@@ -15,30 +15,30 @@ logen(go/4,go(A,B,C,D)) :-
     logen(unfold,genvardecls(G,I,H)),
     logen(call,regexp(let(var(cost),cns(nat(0)),I),J)),
     logen(memo,exec(J,B,C,D,[])).
-logen(exec/5,exec(A,big,right,no,B)) :-
+logen(exec/5,exec(A,big,right,none,B)) :-
     logen(unfold,copyStateSkeleton(B,C)),
     logen(memo,bigstep(A,right,B,C)).
-logen(exec/5,exec(A,small,right,no,B)) :-
+logen(exec/5,exec(A,small,right,none,B)) :-
     logen(memo,run(A,B)).
-logen(exec/5,exec(A,big,left,no,B)) :-
+logen(exec/5,exec(A,big,left,none,B)) :-
     logen(unfold,copyStateSkeleton(B,C)),
     logen(memo,bigstep(A,left,B,C)).
-logen(exec/5,exec(A,small,left,no,B)) :-
+logen(exec/5,exec(A,small,left,none,B)) :-
     logen(memo,run(A,B)).
-logen(exec/5,exec(A,big,right,yes,B)) :-
-    logen(call,transformRegExpr(A,C)),
-    logen(unfold,copyStateSkeleton(B,D)),
-    logen(memo,bigstep(C,right,B,D)).
-logen(exec/5,exec(A,small,right,yes,B)) :-
-    logen(call,transformRegExpr(A,C)),
-    logen(memo,run(C,B)).
-logen(exec/5,exec(A,big,left,yes,B)) :-
-    logen(call,transformRegExpr(A,C)),
-    logen(unfold,copyStateSkeleton(B,D)),
-    logen(memo,bigstep(C,left,B,D)).
-logen(exec/5,exec(A,small,left,yes,B)) :-
-    logen(call,transformRegExpr(A,C)),
-    logen(memo,run(C,B)).
+logen(exec/5,exec(A,big,right,B,C)) :-
+    logen(call,transformRegExpr(A,B,D)),
+    logen(unfold,copyStateSkeleton(C,E)),
+    logen(memo,bigstep(D,right,C,E)).
+logen(exec/5,exec(A,small,right,B,C)) :-
+    logen(call,transformRegExpr(A,B,D)),
+    logen(memo,run(D,C)).
+logen(exec/5,exec(A,big,left,B,C)) :-
+    logen(call,transformRegExpr(A,B,D)),
+    logen(unfold,copyStateSkeleton(C,E)),
+    logen(memo,bigstep(D,left,C,E)).
+logen(exec/5,exec(A,small,left,B,C)) :-
+    logen(call,transformRegExpr(A,B,D)),
+    logen(memo,run(D,C)).
 logen(genvardecls/3,genvardecls([],A,A)).
 logen(genvardecls/3,genvardecls([[vardecl(var(D),_,C)]|B],let(var(D),C,E),A)) :-
     logen(unfold,genvardecls(B,E,A)).
@@ -73,6 +73,9 @@ logen(bigstep/4,bigstep(D+_,A,B,C)) :-
     logen(memo,bigstep(D,A,B,C)).
 logen(bigstep/4,bigstep(_+D,A,B,C)) :-
     logen(memo,bigstep(D,A,B,C)).
+logen(bigstep/4,bigstep(star(_),_,A,A)).
+logen(bigstep/4,bigstep(star(C),right,A,B)) :-
+    logen(memo,bigstep(C:star(C),right,A,B)).
 logen(bigstep/4,bigstep(while(B,_),_,A,A)) :-
     logen(unfold,evalfalse(B,A)).
 logen(bigstep/4,bigstep(while(C,D),right,A,B)) :-
@@ -104,6 +107,9 @@ logen(step/4,step(D+_,A,B,C)) :-
     logen(unfold,step(D,A,B,C)).
 logen(step/4,step(_+D,A,B,C)) :-
     logen(unfold,step(D,A,B,C)).
+logen(step/4,step(star(_),eps,A,A)).
+logen(step/4,step(star(C),D:star(C),A,B)) :-
+    logen(unfold,step(C,D,A,B)).
 logen(step/4,step(while(B,_),eps,A,A)) :-
     logen(unfold,evalfalse(B,A)).
 logen(step/4,step(while(C,D),E:while(C,D),A,B)) :-
@@ -221,16 +227,16 @@ logen(copyStateSkeleton/2,copyStateSkeleton([],[])).
 logen(copyStateSkeleton/2,copyStateSkeleton([(B,_)|A],[(B,_)|C])) :-
     logen(unfold,copyStateSkeleton(A,C)).
 logen(observeState/1,observeState(A)) :-
-    logen(unfold,projectVars(A,_)),
-    logen(rescall,write(A)),
-    logen(rescall,nl).
+    logen(unfold,projectVars(A,_)).
+    %logen(rescall,write(A)),
+    %logen(rescall,nl).
 logen(observeStates/2,observeStates(A,B)) :-
     logen(call,append(C,[_],A)),
     logen(call,append(_,[D],B)),
     logen(memo,observeCost(C,D)),
-    logen(unfold,projectVars(B,_)),
-    logen(rescall,write((A,B))),
-    logen(rescall,nl).
+    logen(unfold,projectVars(B,_)).
+    %logen(rescall,write((A,B))),
+    %logen(rescall,nl).
 logen(projectVars/2,projectVars([],0)).
 logen(projectVars/2,projectVars([B|C],A)) :-
     logen(unfold,projectVars(C,D)),
@@ -245,14 +251,14 @@ logen(get_options/3,get_options([C|D],A,B)) :-
 logen(recognised_option/3,recognised_option('-prg',file(A),[A])).
 logen(recognised_option/3,recognised_option('-big',style(big),[])).
 logen(recognised_option/3,recognised_option('-small',style(small),[])).
-logen(recognised_option/3,recognised_option('-transform',transform(yes),[])).
+logen(recognised_option/3,recognised_option('-transform',transform(A),[A])).
 logen(recognised_option/3,recognised_option('-left',recursion(left),[])).
 logen(recognised_option/3,recognised_option('-right',recursion(right),[])).
 logen(set_options/5,set_options(A,B,C,D,E)) :-
     if(logen(call,member(file(B),A)),logen(call,true),(logen(rescall,write('No input file given')),logen(rescall,nl),logen(call,fail))),
     if(logen(call,member(style(C),A)),logen(call,true),logen(call,C=small)),
     if(logen(call,member(recursion(D),A)),logen(call,true),logen(call,D=right)),
-    if(logen(call,member(transform(E),A)),logen(call,true),logen(call,E=no)).
+    if(logen(call,member(transform(E),A)),logen(call,true),logen(call,E=none)).
 
 
 % Store

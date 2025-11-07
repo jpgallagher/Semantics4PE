@@ -11,10 +11,10 @@
 
 main(ArgV) :-
     get_options(ArgV,Options,_),
-    set_options(Options,File,Style,LR,YN),
-    go(File,Style,LR,YN).
+    set_options(Options,File,Style,LR,Trans),
+    go(File,Style,LR,Trans).
     
-go(File,Style,LR,YN) :-
+go(File,Style,LR,Trans) :-
     open(File,read,S), 					% Read the AST of the parsed program
     read(S,P),
     close(S),
@@ -22,33 +22,32 @@ go(File,Style,LR,YN) :-
 	member(function(main,[],Code),Prog),
 	genvardecls(Prog,Code1,Code), 		% Global variable declarations
     regexp(let(var(cost),cns(nat(0)),Code1),Expr),	% Initialise cost variable
-    exec(Expr,Style,LR,YN,[]).
+    exec(Expr,Style,LR,Trans,[]).
     
-exec(Expr,big,right,no,St) :-
+exec(Expr,big,right,none,St) :-
 	copyStateSkeleton(St,St1),
 	bigstep(Expr,right,St,St1).
-exec(Expr,small,right,no,St) :-	
+exec(Expr,small,right,none,St) :-	
 	run(Expr,St).
-exec(Expr,big,left,no,St) :-
+exec(Expr,big,left,none,St) :-
 	copyStateSkeleton(St,St1),
 	bigstep(Expr,left,St,St1).
-exec(Expr,small,left,no,St) :-
+exec(Expr,small,left,none,St) :-
 	run(Expr,St).
-exec(Expr,big,right,yes,St) :-
-	transformRegExpr(Expr,TExpr),
+exec(Expr,big,right,Trans,St) :-
+	transformRegExpr(Expr,Trans,TExpr),
 	copyStateSkeleton(St,St1),
 	bigstep(TExpr,right,St,St1).
-exec(Expr,small,right,yes,St) :-
-	transformRegExpr(Expr,TExpr),
+exec(Expr,small,right,Trans,St) :-
+	transformRegExpr(Expr,Trans,TExpr),
 	run(TExpr,St).
-exec(Expr,big,left,yes,St) :-
-	transformRegExpr(Expr,TExpr),
+exec(Expr,big,left,Trans,St) :-
+	transformRegExpr(Expr,Trans,TExpr),
 	copyStateSkeleton(St,St1),
 	bigstep(TExpr,left,St,St1).
-exec(Expr,small,left,yes,St) :-
-	transformRegExpr(Expr,TExpr),
+exec(Expr,small,left,Trans,St) :-
+	transformRegExpr(Expr,Trans,TExpr),
 	run(TExpr,St).		
-	
 	
 genvardecls([],Code0,Code0).
 genvardecls([[vardecl(var(X),_,Init)]|P],let(var(X),Init,Code1),Code0) :-
@@ -104,9 +103,9 @@ bigstep(E1+_,LR,St0,St1) :-
 	bigstep(E1,LR,St0,St1).
 bigstep(_+E2,LR,St0,St1) :-
 	bigstep(E2,LR,St0,St1).
-%bigstep(star(_),_,St,St).
-%bigstep(star(E),right,St0,St1) :-		% Right recursive interpretation
-%	bigstep(E:star(E),right,St0,St1).
+bigstep(star(_),_,St,St).
+bigstep(star(E),right,St0,St1) :-		% Right recursive interpretation
+	bigstep(E:star(E),right,St0,St1).
 %bigstep(star(E),left,St0,St1) :-		% Left recursive interpretation
 %	bigstep(star(E):E,left,St0,St1).
 bigstep(while(E,_),_,St0,St0) :-
@@ -149,9 +148,9 @@ step(Expr1+_Expr2,Expr11,St0,St1) :-
 	step(Expr1,Expr11,St0,St1).
 step(_Expr1+Expr2,Expr21,St0,St1) :-
 	step(Expr2,Expr21,St0,St1).
-%step(star(_Expr),eps,St0,St0).
-%step(star(Expr),Expr1:star(Expr),St0,St1) :-		% Right recursive interpretation
-%	step(Expr,Expr1,St0,St1).
+step(star(_Expr),eps,St0,St0).
+step(star(Expr),Expr1:star(Expr),St0,St1) :-		% Right recursive interpretation
+	step(Expr,Expr1,St0,St1).
 step(while(Expr,_E),eps,St0,St0) :-
 	evalfalse(Expr,St0).
 step(while(Expr,E),E1:while(Expr,E),St0,St1) :-		% Right recursive interpretation
@@ -293,17 +292,17 @@ copyStateSkeleton([(X,_)|St],[(X,_)|St1]) :-
 	copyStateSkeleton(St,St1).
 	
 observeState(St) :-	
-	projectVars(St,_),
-	write(St),
-	nl.
+	projectVars(St,_).
+	%write(St),
+	%nl.
 	
 observeStates(St0,St1) :-	
 	append(IVars,[_],St0),	% Separate input vars and final cost
 	append(_,[C],St1),
 	observeCost(IVars,C),
-	projectVars(St1,_),
-	write((St0,St1)),
-	nl.
+	projectVars(St1,_).
+	%write((St0,St1)),
+	%nl.
 	
 projectVars([],0).
 projectVars([X|Xs],N) :-
@@ -332,11 +331,11 @@ get_options([X|T],Options,Args) :-
 recognised_option('-prg',file(R),[R]).
 recognised_option('-big',style(big),[]).
 recognised_option('-small',style(small),[]).
-recognised_option('-transform',transform(yes),[]).
+recognised_option('-transform',transform(T),[T]).
 recognised_option('-left',recursion(left),[]).	% not yet implemented
 recognised_option('-right',recursion(right),[]).
 
-set_options(Options,File,Style,LR,YN) :-
+set_options(Options,File,Style,LR,T) :-
     (member(file(File),Options) -> true
     ; write('No input file given'),nl,fail
     ),
@@ -346,7 +345,7 @@ set_options(Options,File,Style,LR,YN) :-
     ( member(recursion(LR),Options) -> true
     ; LR=right
     ),
-    ( member(transform(YN),Options) -> true
-    ; YN=no
+    ( member(transform(T),Options) -> true
+    ; T=none
     ).
 
