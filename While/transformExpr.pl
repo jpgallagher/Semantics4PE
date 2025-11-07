@@ -18,37 +18,52 @@
 %
 % Transform by replacing star(A+B) by star(B):star(A:star(B))
 % Transform by replacing while(E,A+B) by while(E,B):while(E,A:while(E,B))
+% E.g. while(E,if(E1,A,B)) by while(E,false(E1):B):while(E,true(E1):A:while(E,false(E1):B))
 % Preserve local environments of form decl(--)  S  release(---)
 	
-transformRegExpr(E,E) :-
+transformRegExpr(E,_,E) :-
 	literal(E).
-transformRegExpr(decl(var(X),E):(E1:release(var(X))),decl(var(X),E):(E2:release(var(X)))) :-
-	transformRegExpr(E1,E2).
-transformRegExpr(E1:E2,E11:E21) :-
+transformRegExpr(decl(var(X),E):(E1:release(var(X))),T,decl(var(X),E):(E2:release(var(X)))) :-
+	transformRegExpr(E1,T,E2).
+transformRegExpr(E1:E2,T,E11:E21) :-
 	functor(E1,F,N),
 	F/N \== decl/2,
-	transformRegExpr(E1,E11),
-	transformRegExpr(E2,E21).
-transformRegExpr(E1+E2,E11+E21) :-
-	transformRegExpr(E1,E11),
-	transformRegExpr(E2,E21).
-transformRegExpr(star(E),E3) :-
-	transformRegExpr(E,E1),
-	dnfRegExpr(E1,E2),
-	transformStar(star(E2),E3).
-transformRegExpr(while(E,S),S4) :-
+	transformRegExpr(E1,T,E11),
+	transformRegExpr(E2,T,E21).
+transformRegExpr(E1+E2,T,E11+E21) :-
+	transformRegExpr(E1,T,E11),
+	transformRegExpr(E2,T,E21).
+%transformRegExpr(star(E),E3) :-
+%	transformRegExpr(E,E1),
+%	dnfRegExpr(E1,E2),
+%	transformStar(star(E2),E3).
+transformRegExpr(while(E,S),T,S4) :-
 	dnfRegExpr(S,(true(E1):S1)+(false(E1):S2)),
 	straightLineCode(S1),
 	straightLineCode(S2),
 	!,
-	S3=while(logicaland(E,not(E1)),S2),
-	S4=S3:while(logicaland(E,E1),S1:S3).
-transformRegExpr(while(E,S),while(E,S)).
+	loopTransform(T,E,E1,S1,S2,S4).
+transformRegExpr(while(E,S),_,while(E,S)).
 
-transformStar(star(E),star(E)) :-
-	singlePath(E).
-transformStar(star(E1+E2),E3:star(E1:E3)) :-
-	transformStar(star(E2),E3).
+
+loopTransform(t0,E,E1,S1,S2,S4) :-
+	S3=while(logicaland(E,not(E1)),S2),
+	S4=(S3:while(logicaland(E,E1),S1:S3)).
+loopTransform(t1,E,E1,S1,S2,S4) :-
+	S3=while(logicaland(E,not(E1)),S2),
+	S4=(S3:while(logicaland(E,E1),S1:S3)):false(E).
+loopTransform(t2,E,E1,S1,S2,S4) :-
+	S3=while(logicaland(E,not(E1)),S2),	 
+	S4=(true(E):((S3:while(logicaland(E,E1),S1:S3)):false(E)))+false(E).
+loopTransform(star,E,E1,S1,S2,S4) :-
+	S3=star(true(E):(false(E1):S2)),
+	S4=S3:star(true(E):((true(E1):S1):S3)).
+	
+	
+%transformStar(star(E),star(E)) :-
+%	singlePath(E).
+%transformStar(star(E1+E2),E3:star(E1:E3)) :-
+%	transformStar(star(E2),E3).
 	
 straightLineCode(eps).
 straightLineCode(null).
