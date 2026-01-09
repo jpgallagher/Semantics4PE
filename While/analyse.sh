@@ -28,7 +28,7 @@ PE="/Users/jpg/Library/CloudStorage/OneDrive-RoskildeUniversitet/Research/LP/clp
         do
         for narrow in  "0" "1" "2"
           do 
-          for suffix in "none" "star" "t0" "t1" "t2"
+          for suffix in "none" "star_rank" "t0_rank" "t1_rank" "t2_rank"
             do
             suffix1="_big_right_""$suffix"
         	chcversion="$f""$suffix1".pl

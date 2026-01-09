@@ -3,19 +3,21 @@
 # Examples
 # ./c2chc.sh -s /Users/jpg/Desktop/test2.c 
 # ./c2chc.sh -b /Users/jpg/Desktop/test2.c 
-# ./c2chc.sh -b -r -t /Users/jpg/Desktop/test2.c 
+# ./c2chc.sh -b -r -t star /Users/jpg/Desktop/test2.c 
 # ./c2chc.sh -b -l /Users/jpg/Desktop/test2.c 
 
 AST="/Users/jpg/recsolv/bigstep/CParser"
 WHILE="."
 
-# Interpret the script options as options for "while"
+# Interpret the script options as options for "while" interpreter
 
-yn="no"
+# Values for -t option:  star, t0, t1, t2
+
+trans="none"
 style="small"
 recursion="right"
 
-OPTSTRING="bslrt"
+OPTSTRING="bslrt:"
 
 while getopts ${OPTSTRING} flag 
 do
@@ -23,8 +25,8 @@ do
        b) style="big"; 
 	   ;;
        s) style="small"; 
-	   ;;
-	   t) yn="yes";
+       ;;
+	   t) trans=$OPTARG;
 	   ;;
 	   r) recursion="right"; 
 	   ;;
@@ -37,7 +39,7 @@ shift $(( OPTIND - 1 ))
 
 prg=$1
 f=`basename $prg`
-echo "$f" $style $recursion $yn
+echo "$f" $style $recursion $trans
 f=${f%.c} # remove .c extension
 
 d=`dirname "$prg"`
@@ -53,7 +55,7 @@ java -jar "$AST"/xcfp.jar "$prg" > "$resultdir"/parse.out
 $AST/ast4sem "$resultdir"/parse.out "$resultdir"/ast.out
 
 # PE of while.pl wrt to goal
-logengoal="go("\'"$resultdir"/ast.out\'",$style"",$recursion"",$yn"")"
+logengoal="go("\'"$resultdir"/ast.out\'",$style"",$recursion"",$trans"")"
 # echo "$logengoal"
 
 # logen
@@ -69,17 +71,18 @@ $WHILE/renamePreds "$resultdir"/$f.pe "$resultdir"/$f.sigs "$resultdir"/$f.renam
 
 # unfold determinate calls
 
-case "${yn}" in  
-       yes) trans="trans"; 
-	   ;;
-       no) trans="notrans"; 
-	   ;;
-esac
+#case "${yn}" in  
+#       yes) trans="trans"; 
+#	   ;;
+#       no) trans="notrans"; 
+#	   ;;
+#esac
 
 outname=$f"_"$style"_"$recursion"_"$trans".pl"
 
 # echo $outname
 
 chclibs-unfoldForward -prg "$resultdir"/$f.renamed.pl -entry "go__0" -det -eq -o "$resultdir"/$outname
+
 
 $WHILE/cleanup.sh

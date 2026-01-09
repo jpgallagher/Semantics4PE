@@ -7,12 +7,19 @@ for file in $1/*.c
      d=`dirname $file`
      f=`basename $file`
      echo "Translating" $f
-     for opt1 in "-b" "-s"
-       do
-         for opt2 in "none" "star" "t0" "t1" "t2"
-           do 
-             ./c2chc.sh $opt1 "-t" "$opt2" $d/$f
-           done
-       done
+     
+     # Small step semantics
+     ./c2chc.sh "-s" "-t" "none" $d/$f
+     for opt2 in "star" "t0" "t1" "t2"
+     do 
+          ./c2chc.sh "-s" "-t" "$opt2" $d/$f
+     done
+     
+     # Big step semantics
+     ./c2chc.sh "-b" "-t" "none" $d/$f
+     for opt2 in "star" "t0" "t1" "t2"
+     do 
+          ./c2chc.sh "-b" "-t" "$opt2" $d/$f
+     done
   done
 
