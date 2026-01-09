@@ -3,6 +3,7 @@
 :- use_module(while_reg).
 :- use_module(transformExpr).
 :- use_module(reg2c).
+:- use_module(label_expr).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
@@ -26,28 +27,36 @@ go(File,Style,LR,Trans) :-
     
 exec(Expr,big,right,none,St) :-
 	copyStateSkeleton(St,St1),
-	bigstep(Expr,right,St,St1).
-exec(Expr,small,right,none,St) :-	
-	run(Expr,St).
+	labelExpr(Expr,LExpr,0,_),
+	bigstep(LExpr,right,St,St1).
+exec(Expr,small,right,none,St) :-
+	labelExpr(Expr,LExpr,0,_),	
+	run(LExpr,St).
 exec(Expr,big,left,none,St) :-
 	copyStateSkeleton(St,St1),
-	bigstep(Expr,left,St,St1).
+	labelExpr(Expr,LExpr,0,_),
+	bigstep(LExpr,left,St,St1).
 exec(Expr,small,left,none,St) :-
-	run(Expr,St).
+	labelExpr(Expr,LExpr,0,_),
+	run(LExpr,St).
 exec(Expr,big,right,Trans,St) :-
 	transformRegExpr(Expr,Trans,TExpr),
+	labelExpr(TExpr,LExpr,0,_),
 	copyStateSkeleton(St,St1),
-	bigstep(TExpr,right,St,St1).
+	bigstep(LExpr,right,St,St1).
 exec(Expr,small,right,Trans,St) :-
 	transformRegExpr(Expr,Trans,TExpr),
-	run(TExpr,St).
+	labelExpr(TExpr,LExpr,0,_),
+	run(LExpr,St).
 exec(Expr,big,left,Trans,St) :-
 	transformRegExpr(Expr,Trans,TExpr),
+	labelExpr(TExpr,LExpr,0,_),
 	copyStateSkeleton(St,St1),
-	bigstep(TExpr,left,St,St1).
+	bigstep(LExpr,left,St,St1).
 exec(Expr,small,left,Trans,St) :-
 	transformRegExpr(Expr,Trans,TExpr),
-	run(TExpr,St).		
+	labelExpr(TExpr,LExpr,0,_),
+	run(LExpr,St).		
 	
 genvardecls([],Code0,Code0).
 genvardecls([[vardecl(var(X),_,Init)]|P],let(var(X),Init,Code1),Code0) :-
@@ -78,45 +87,85 @@ initDeclVal(null,_).
 % Big-step interpretation wrt a regular expression and left/right recursion
 
 bigstep(eps,_,St,St).
-bigstep(asg(var(X),E),_,St0,St2) :-
+bigstep(asg(var(X),E,_),_,St0,St2) :-
 	evalAndSave(X,E,St0,St1),
 	evalAndSave(cost,add(var(cost),cns(nat(1))),St1,St2).	% increment cost
-bigstep(true(E),_,St,St) :-
+bigstep(true(E,_),_,St,St) :-
 	evaltrue(E,St).
-bigstep(assert(E),_,St,St) :-
+bigstep(assert(E,_),_,St,St) :-
 	evaltrue(E,St).
-bigstep(false(E),_,St,St) :-
+bigstep(false(E,_),_,St,St) :-
 	evalfalse(E,St).
-bigstep(decl(var(X),E):(E1:release(var(X))),LR,St0,St3) :-
+bigstep((decl(var(X),E,_):((E1:release(var(X),_)))^_)^_,LR,St0,St3) :-
 	evalAndSave(X,E,[(X,_)|St0],St1),
 	copyStateSkeleton(St1,St2),
 	bigstep(E1,LR,St1,St2),
 	observeStates(St1,St2),
 	removeVar(X,St2,St3).
-bigstep(E1:E2,LR,St0,St2) :-
+bigstep((E1:E2)^_,LR,St0,St2) :-
 	functor(E1,F,N),
-	F/N \== decl/2, 
+	F/N \== decl/3, 
 	copyStateSkeleton(St0,St1),
 	bigstep(E1,LR,St0,St1),
 	bigstep(E2,LR,St1,St2).
-bigstep(E1+_,LR,St0,St1) :-
+bigstep((E1+_)^_,LR,St0,St1) :-
 	bigstep(E1,LR,St0,St1).
-bigstep(_+E2,LR,St0,St1) :-
+bigstep((_+E2)^_,LR,St0,St1) :-
 	bigstep(E2,LR,St0,St1).
-bigstep(star(_),_,St,St).
-bigstep(star(E),right,St0,St1) :-		% Right recursive interpretation
-	bigstep(E:star(E),right,St0,St1).
-%bigstep(star(E),left,St0,St1) :-		% Left recursive interpretation
-%	bigstep(star(E):E,left,St0,St1).
-bigstep(while(E,_),_,St0,St0) :-
+bigstep(star(_,_),_,St,St).
+bigstep(star(E,N),right,St0,St1) :-		% Right recursive interpretation
+	bigstep((E:star(E,N))^N,right,St0,St1).
+%bigstep(star(E,N),left,St0,St1) :-		% Left recursive interpretation
+%	bigstep((star(E,N):E)^N,left,St0,St1).
+bigstep(while(E,_,_),_,St0,St0) :-
 	evalfalse(E,St0).
-bigstep(while(Expr,E),right,St0,St1) :-		% Right recursive interpretation
+bigstep(while(Expr,E,N),right,St0,St1) :-		% Right recursive interpretation
 	evaltrue(Expr,St0),
-	bigstep(E:while(Expr,E),right,St0,St1).
-%bigstep(while(Expr,E),left,St0,St1) :-		% Left recursive interpretation omitted
-%	evaltrue(Expr,St0),
-%	bigstep(while(Expr,E):E,right,St0,St1).
-	
+	bigstep((E:while(Expr,E,N))^N,right,St0,St1).
+
+
+% % Big-step interpretation wrt a regular expression and left/right recursion
+% 
+% bigstep(eps,_,St,St).
+% bigstep(asg(var(X),E),_,St0,St2) :-
+% 	evalAndSave(X,E,St0,St1),
+% 	evalAndSave(cost,add(var(cost),cns(nat(1))),St1,St2).	% increment cost
+% bigstep(true(E),_,St,St) :-
+% 	evaltrue(E,St).
+% bigstep(assert(E),_,St,St) :-
+% 	evaltrue(E,St).
+% bigstep(false(E),_,St,St) :-
+% 	evalfalse(E,St).
+% bigstep(decl(var(X),E):(E1:release(var(X))),LR,St0,St3) :-
+% 	evalAndSave(X,E,[(X,_)|St0],St1),
+% 	copyStateSkeleton(St1,St2),
+% 	bigstep(E1,LR,St1,St2),
+% 	observeStates(St1,St2),
+% 	removeVar(X,St2,St3).
+% bigstep(E1:E2,LR,St0,St2) :-
+% 	functor(E1,F,N),
+% 	F/N \== decl/2, 
+% 	copyStateSkeleton(St0,St1),
+% 	bigstep(E1,LR,St0,St1),
+% 	bigstep(E2,LR,St1,St2).
+% bigstep(E1+_,LR,St0,St1) :-
+% 	bigstep(E1,LR,St0,St1).
+% bigstep(_+E2,LR,St0,St1) :-
+% 	bigstep(E2,LR,St0,St1).
+% bigstep(star(_),_,St,St).
+% bigstep(star(E),right,St0,St1) :-		% Right recursive interpretation
+% 	bigstep(E:star(E),right,St0,St1).
+% %bigstep(star(E),left,St0,St1) :-		% Left recursive interpretation
+% %	bigstep(star(E):E,left,St0,St1).
+% bigstep(while(E,_),_,St0,St0) :-
+% 	evalfalse(E,St0).
+% bigstep(while(Expr,E),right,St0,St1) :-		% Right recursive interpretation
+% 	evaltrue(Expr,St0),
+% 	bigstep(E:while(Expr,E),right,St0,St1).
+% %bigstep(while(Expr,E),left,St0,St1) :-		% Left recursive interpretation omitted
+% %	evaltrue(Expr,St0),
+% %	bigstep(while(Expr,E):E,right,St0,St1).
+% 	
 
 % Small-step interpretation wrt a regular expression 
 % Ignore left/right with small-step - unclear what it means
@@ -126,38 +175,68 @@ run(Expr,St) :-
 	step(Expr,Expr1,St,St1),
 	run(Expr1,St1).
 	
-step(asg(var(X),E),eps,St0,St2) :-
+step(asg(var(X),E,_),eps,St0,St2) :-
 	evalAndSave(X,E,St0,St1),
 	evalAndSave(cost,add(var(cost),cns(nat(1))),St1,St2).	% increment cost
-step(true(E),eps,St0,St0) :-
+step(true(E,_),eps,St0,St0) :-
 	evaltrue(E,St0).
-step(assert(E),eps,St0,St0) :-
+step(assert(E,_),eps,St0,St0) :-
 	evaltrue(E,St0).
-step(false(E),eps,St0,St0) :-
+step(false(E,_),eps,St0,St0) :-
 	evalfalse(E,St0).
-step(decl(var(X),E),eps,St0,St1) :-
+step(decl(var(X),E,_),eps,St0,St1) :-
 	evalAndSave(X,E,[(X,_)|St0],St1).
-step(release(var(X)),eps,St0,St1) :-
+step(release(var(X),_),eps,St0,St1) :-
 	observeState(St0),
 	removeVar(X,St0,St1).
-step((eps:S),S,St0,St0).
-step((S1:S2),S11:S2,St0,St1) :-
+step((eps:S)^_,S,St0,St0).
+step((S1:S2)^N,(S11:S2)^N,St0,St1) :-
 	S1\==eps,
 	step(S1,S11,St0,St1).
-step(Expr1+_Expr2,Expr11,St0,St1) :-
+step((Expr1+_Expr2)^_,Expr11,St0,St1) :-
 	step(Expr1,Expr11,St0,St1).
-step(_Expr1+Expr2,Expr21,St0,St1) :-
+step((_Expr1+Expr2)^_,Expr21,St0,St1) :-
 	step(Expr2,Expr21,St0,St1).
-step(star(_Expr),eps,St0,St0).
-step(star(Expr),Expr1:star(Expr),St0,St1) :-		% Right recursive interpretation
+step(star(_Expr,_),eps,St0,St0).
+step(star(Expr,N),(Expr1:star(Expr,N))^N,St0,St1) :-	% Right recursive interpretation
 	step(Expr,Expr1,St0,St1).
-step(while(Expr,_E),eps,St0,St0) :-
+step(while(Expr,_E,_),eps,St0,St0) :-
 	evalfalse(Expr,St0).
-step(while(Expr,E),E1:while(Expr,E),St0,St1) :-		% Right recursive interpretation
+step(while(Expr,E,N),(E1:while(Expr,E,N))^N,St0,St1) :-	% Right recursive interpretation
 	evaltrue(Expr,St0),
 	step(E,E1,St0,St1).
 
-	
+% step(asg(var(X),E),eps,St0,St2) :-
+% 	evalAndSave(X,E,St0,St1),
+% 	evalAndSave(cost,add(var(cost),cns(nat(1))),St1,St2).	% increment cost
+% step(true(E),eps,St0,St0) :-
+% 	evaltrue(E,St0).
+% step(assert(E),eps,St0,St0) :-
+% 	evaltrue(E,St0).
+% step(false(E),eps,St0,St0) :-
+% 	evalfalse(E,St0).
+% step(decl(var(X),E),eps,St0,St1) :-
+% 	evalAndSave(X,E,[(X,_)|St0],St1).
+% step(release(var(X)),eps,St0,St1) :-
+% 	observeState(St0),
+% 	removeVar(X,St0,St1).
+% step((eps:S),S,St0,St0).
+% step((S1:S2),S11:S2,St0,St1) :-
+% 	S1\==eps,
+% 	step(S1,S11,St0,St1).
+% step(Expr1+_Expr2,Expr11,St0,St1) :-
+% 	step(Expr1,Expr11,St0,St1).
+% step(_Expr1+Expr2,Expr21,St0,St1) :-
+% 	step(Expr2,Expr21,St0,St1).
+% step(star(_Expr),eps,St0,St0).
+% step(star(Expr),Expr1:star(Expr),St0,St1) :-		% Right recursive interpretation
+% 	step(Expr,Expr1,St0,St1).
+% step(while(Expr,_E),eps,St0,St0) :-
+% 	evalfalse(Expr,St0).
+% step(while(Expr,E),E1:while(Expr,E),St0,St1) :-		% Right recursive interpretation
+% 	evaltrue(Expr,St0),
+% 	step(E,E1,St0,St1).
+
 	
 %%%%%%%%%%%%%%%%%%%%%%%%
 %----- expressions -----
@@ -299,8 +378,8 @@ observeState(St) :-
 observeStates(St0,St1) :-	
 	append(IVars,[_],St0),	% Separate input vars and final cost
 	append(_,[C],St1),
-	observeCost(IVars,C),
-	projectVars(St1,_).
+	observeCost(IVars,C).
+	%projectVars(St1,_).
 	%write((St0,St1)),
 	%nl.
 	

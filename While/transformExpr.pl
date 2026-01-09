@@ -46,6 +46,7 @@ transformRegExpr(while(E,S),T,S4) :-
 transformRegExpr(while(E,S),_,while(E,S)).
 
 
+% Transform loop and insert a marker 0=<1 for the ranking constraint.
 loopTransform(t0,E,E1,S1,S2,S4) :-
 	S3=while(logicaland(E,not(E1)),S2),
 	S4=(S3:while(logicaland(E,E1),S1:S3)).

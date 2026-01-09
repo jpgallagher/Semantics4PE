@@ -59,6 +59,9 @@ getArgName(decl(_,_):_,decl) :-
 	!.
 getArgName(_:_,seq) :-
 	!.
+getArgName(E^_,Name) :-
+	!,
+	getArgName(E,Name).
 getArgName(star(_),while) :-
 	!.
 getArgName(_+_,ifthenelse) :-
