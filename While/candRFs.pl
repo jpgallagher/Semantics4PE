@@ -13,16 +13,24 @@ go(H,Cs,B,Rs) :-
 	findRankingFunction(H,Cs,B,Rs),
 	ppl_finalize.
 	
-findRankingFunction(H,Cs,B,RFs) :-
-	rankingFunctionSpace(H,Cs,B,H1),
+findRankingFunction(H,Cs,B,RF) :-
+	rankingFunctionSpace(H,Cs,B,H1,Point),
+	ppl_Polyhedron_space_dimension(H1,N0),
+	pickRankingFunction(H1,N0,Point,RF).
+	
+pickRankingFunction(H1,N0,_Point,RF) :-
 	getConstraint(H1,Space),
 	write('Space = '),write(Space),nl,
-	ppl_Polyhedron_space_dimension(H1,N0),
-	candidateRFs(Space,N0,RFs).
+	candidateRFs(Space,N0,Point),
+	instantiateRF(Point,N0,RF),
+	!.
+pickRankingFunction(_H1,N0,point(Q),RF) :-	% Use PPL soln if search does not find r.f.
+	makeAffineFunction(Q,N0,RF).
+	
 
 % Find the space of linear ranking functions
 
-rankingFunctionSpace(H,Cs,B,H1) :-
+rankingFunctionSpace(H,Cs,B,H1,RF0) :-
 	functor(H,P,N),
 	H=..[P|Ys0],
 	B=..[P|Ys1],
@@ -35,7 +43,8 @@ rankingFunctionSpace(H,Cs,B,H1) :-
 	makePolyhedron(Cs2,H0),
 	N2 is 2*N,
 	raiseDimension(H0,N2),
-	ppl_all_affine_ranking_functions_MS_NNC_Polyhedron(H0,H1).
+	ppl_all_affine_ranking_functions_MS_NNC_Polyhedron(H0,H1),
+	ppl_one_affine_ranking_function_MS_NNC_Polyhedron(H0,RF0). 	% one r.f. backup soln.
 	
 freshVars([X|Xs],[Y|Ys],[X=Y|ACs],Cs) :-
 	freshVars(Xs,Ys,ACs,Cs).
@@ -148,6 +157,44 @@ bounds(Space,V,L,U) :-
 		U is floor(C1/C2); U=false),
 	(ppl_Polyhedron_minimize(H0,V,C3,C4,_TF2) ->
 		L is ceiling(C3/C4); L=false).
+		
+instantiateRF(Point,N,RF) :-
+	rfTerms(Point,Ts),
+	rfExpr(Ts,N,RF).
+	
+rfTerms(['$VAR'(_)=0|Ps],Es) :-
+	!,
+	rfTerms(Ps,Es).
+rfTerms(['$VAR'(K)=V|Ps],[V*'$VAR'(K)|Es]) :-
+	rfTerms(Ps,Es).
+rfTerms([],[]).
+
+rfExpr([V*'$VAR'(K),T|Es],N,RF+T1) :-
+	(K is N-1 -> T1=V; T1=V*'$VAR'(K)),
+	rfExpr([T|Es],N,RF).
+rfExpr([V*'$VAR'(K)],N,T) :-
+	(K is N-1 -> T=V; T=V*'$VAR'(K)).
+	
+		
+% remove the k+1th variable if it is present since it represents the constant
+makeAffineFunction(F1, K, F) :-
+    VK = '$VAR'(K),
+    subterm(F1, N*VK, F, N),
+    !.
+makeAffineFunction(F, _, F).
+
+subterm(T,T,X,X) :-
+	!.
+subterm(T,R,T1,R1) :-
+	T =.. [F|Xs],
+	replace(Xs,R,Xs1,R1),
+	T1 =.. [F|Xs1].
+
+replace([],_,[],_).
+replace([T|Xs],U,[T1|Ys],Y) :-
+	subterm(T,U,T1,Y),
+	replace(Xs,U,Ys,Y).
+	
 	
 % Tests
 
