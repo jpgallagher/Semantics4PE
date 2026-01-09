@@ -31,7 +31,7 @@ rankingFunctionSpace(H,Cs,B,H1) :-
 	numbervars((Ws0,Ws1,ACs),0,_),
 	elimLocals(ACs,(Ws0,Ws1),Cs1),
 	melt((Cs1,Ws0,Ws1),(Cs2,Zs,Zs1)),
-	numbervars((Zs1,Zs,Cs2),0,_),		% get vars in the order required by PPL
+	numbervars((Zs1,Zs,Cs2),0,_),		% Get vars in the order required by PPL
 	makePolyhedron(Cs2,H0),
 	N2 is 2*N,
 	raiseDimension(H0,N2),
@@ -74,6 +74,11 @@ argVars([X|Xs],Vs) :-
 	
 candidateRFs(Space,N0,RFs) :-
 	allocate(Space,0,N0,[],RFs).
+	
+% Successively pick a value for each dimension of the r.f. space
+% Pick interior value near the boundary
+% Pick non-zero values first
+% Arbitrary choice of 3 values nearest to boundary, could be varied.
 	
 allocate(_,K,N0,RFs,RFs) :-
 	K>=N0.
@@ -146,17 +151,20 @@ bounds(Space,V,L,U) :-
 	
 % Tests
 
-test1(Bs) :-
-	go(p(A1,E,F,G),[1*A+ -1*B>=2,1*A+ -1*B+ -1*C>=1,1*B> -1,1*A+ -1*D>=2,1*C>0,1*D> -1,1*B+ -1*E= -1,1*C+ -1*F=1,1*D+ -1*G= -1,A1=A],p(A,B,C,D),Bs).
+test1(RF) :-
+	go(p(A1,E,F,G),[1*A+ -1*B>=2,1*A+ -1*B+ -1*C>=1,1*B> -1,1*A+ -1*D>=2,1*C>0,1*D> -1,1*B+ -1*E= -1,1*C+ -1*F=1,1*D+ -1*G= -1,A1=A],p(A,B,C,D),RF).
 	
-test2(Bs) :-
-	go(p(A1,B1,C1,E),[1*A+ -1*D>=2,1*A+ -1*B>=1,1*A+ -1*B+ -1*C>=1,1*B> -1,1*C> -1,1*D> -1,1*D+ -1*E= -1,A1=A, B1=B, C1=C],p(A,B,C,D),Bs).
+test2(RF) :-
+	go(p(A1,B1,C1,E),[1*A+ -1*D>=2,1*A+ -1*B>=1,1*A+ -1*B+ -1*C>=1,1*B> -1,1*C> -1,1*D> -1,1*D+ -1*E= -1,A1=A, B1=B, C1=C],p(A,B,C,D),RF).
 	
-test3(Bs) :-
-	go(p(A1,E,F,D1),[1*A+ -1*B+ -1*C+1*D>=0,1*A+ -1*B+ -1*C>=0,1*B> -1,1*C>=1,1*D> -1,1*B+ -1*E= -1,1*C+ -1*F=1, A1 = A, D1 = D],p(A,B,C,D),Bs).
+test3(RF) :-
+	go(p(A1,E,F,D1),[1*A+ -1*B+ -1*C+1*D>=0,1*A+ -1*B+ -1*C>=0,1*B> -1,1*C>=1,1*D> -1,1*B+ -1*E= -1,1*C+ -1*F=1, A1 = A, D1 = D],p(A,B,C,D),RF).
 	
-test4(Bs) :-
-	go(p(B),[B < 100, A = B+1],p(A),Bs).
+test4(RF) :-
+	go(p(B),[B < 100, A = B+1],p(A),RF).
 
-test5(Bs) :-
-	go(p(E,F,G,H),[-1*D+1*H>=1,1*D+ -1*H>= -2,1*C>=1,1*B>=1,1*D>=0,1*B+1*D+ -1*F+ -1*H= -1,1*C+ -2*D+ -1*G+2*H=3,1*A+ -1*E=0],p(A,B,C,D),Bs).
+test5(RF) :-
+	go(p(E,F,G,H),[-1*D+1*H>=1,1*D+ -1*H>= -2,1*C>=1,1*B>=1,1*D>=0,1*B+1*D+ -1*F+ -1*H= -1,1*C+ -2*D+ -1*G+2*H=3,1*A+ -1*E=0],p(A,B,C,D),RF).
+	
+test6(RF) :-
+	go(p(A,B),[A>0,B>0,A1=A+1,B1=B-1],p(A1,B1),RF).	
